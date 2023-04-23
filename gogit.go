@@ -236,7 +236,7 @@ func gitTag() error {
 				"ensure that it holds a tag in the format vNR.NR.NR such as v1.0.12",
 			}, "\n"))
 	}
-	lines, err := run("git tag")
+	lines, err := run("git", "tag")
 	if err != nil {
 		return err
 	}
