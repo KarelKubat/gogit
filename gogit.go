@@ -63,11 +63,11 @@ func main() {
 	check(hooksInstalled())
 	for _, f := range funcs {
 		check(f())
-		if len(funcs) > 1 {
-			out.Msg(
-				fmt.Sprintf("%q hook finished without errors, the git action is running", os.Args[1]),
-				"may the favor of the git gods be with you")
-		}
+	}
+	if len(funcs) > 1 {
+		out.Msg(fmt.Sprintf(
+			"git hook %q succeeded, may the your local Tibetitan goat god smile on yoiur",
+			os.Args[1]))
 	}
 }
 
