@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+
+	"github.com/mitchellh/colorstring"
 )
 
 const (
@@ -60,10 +62,24 @@ func usage() {
 	os.Exit(1)
 }
 
+var suggestions []string
+
+func suggest(f string, args ...interface{}) string {
+	s := fmt.Sprintf(f, args...)
+	suggestions = append(suggestions, "  "+s)
+	return s
+}
+
 func check(err error) {
 	if err != nil {
 		for _, l := range strings.Split(err.Error(), "\n") {
-			fmt.Fprintf(os.Stdout, "[gogit] fatal: %v\n", l)
+			colorstring.Fprintf(os.Stdout, "[gogit] [red]fatal: %v\n", l)
+		}
+		if len(suggestions) > 0 {
+			colorstring.Fprintf(os.Stdout, "[gogit] [yellow]suggestion(s):\n")
+			for _, s := range suggestions {
+				colorstring.Fprintf(os.Stdout, "[yellow]%v\n", s)
+			}
 		}
 		os.Exit(1)
 	}
@@ -77,8 +93,8 @@ func hooksInstalled() error {
 		if err != nil {
 			errs = append(errs,
 				fmt.Sprintf("hook %q doesn't exist, run:", path),
-				fmt.Sprintf("  echo exec gogit %v > %v", hook, path),
-				fmt.Sprintf("  chmod +x %v", path))
+				suggest("echo exec gogit %v > %v", hook, path),
+				suggest("chmod +x %v", path))
 		}
 	}
 	if len(errs) > 0 {
@@ -90,13 +106,16 @@ func hooksInstalled() error {
 func gotoGitTop() error {
 	lines, err := run("git", "rev-parse", "--show-toplevel")
 	if err != nil {
-		return fmt.Errorf("%v\nrun `git init` and retry", err)
+		return errors.New(strings.Join([]string{
+			err.Error() + ", try:",
+			suggest("git init"),
+		}, "\n"))
 	}
 	if len(lines) != 1 {
 		lines = append(lines, "need exactly 1 output to find the top level git folder")
 		return errors.New(strings.Join(lines, "\n"))
 	}
-	fmt.Printf("[gogit] top level git folder: %q\n", lines[0])
+	colorstring.Printf("[gogit] [green]top level git folder: %q\n", lines[0])
 	if err := os.Chdir(lines[0]); err != nil {
 		return fmt.Errorf("cannot chdir to top level git folder: %v", err)
 	}
@@ -112,12 +131,13 @@ func stdFiles() error {
 		errs = append(errs,
 			"`.gitignore` not found, create one and retry",
 			"at a minimum run:",
-			"  echo .git > .gitignore")
+			suggest("echo .git > .gitignore"))
 	}
 	if _, err := os.Stat("go.mod"); err != nil {
 		errs = append(errs,
 			"`go.mod` not found, at a minimum run:",
-			"  go mod init && go mod tidy")
+			suggest("go mod init"),
+			suggest("go mod tidy"))
 	}
 	if len(errs) > 0 {
 		return errors.New(strings.Join(errs, "\n"))
@@ -180,8 +200,8 @@ func allCommitted() error {
 		strings.Join(
 			append(lines,
 				"not everything is commited, run:",
-				"  git add $FILE(s)",
-				"  git commit -m $MESSAGE"),
+				suggest("git add $FILE(s)"),
+				suggest("git commit -m $MESSAGE")),
 			"\n"))
 }
 
@@ -196,15 +216,16 @@ func gitTag() error {
 		return errors.New(
 			strings.Join([]string{
 				fmt.Sprintf("%q not found, for a first tagging run:", gitTagFile),
-				fmt.Sprintf("  echo '# repository tag, update upon changes' > %v", gitTagFile),
-				fmt.Sprintf("  echo v0.0.0 >> %v", gitTagFile),
+				suggest("echo '# repository tag, update upon changes' > %v", gitTagFile),
+				suggest("echo v0.0.0 >> %v", gitTagFile),
+				suggest("git tag -a v0.0.0 -m $MESSAGE"),
 			}, "\n"))
 	}
 	b, err := os.ReadFile(gitTagFile)
 	if err != nil {
 		return err
 	}
-	foundTag := false
+	fileTag := ""
 	for _, l := range strings.Split(string(b), "\n") {
 		if strings.HasPrefix(l, "#") {
 			continue
@@ -214,22 +235,47 @@ func gitTag() error {
 			return fmt.Errorf("internal jam for regexp %q: %v", tagFormat, err)
 		}
 		if matched {
-			foundTag = true
+			fileTag = l
 			break
 		}
 	}
-	if !foundTag {
+	if fileTag == "" {
 		return errors.New(
 			strings.Join([]string{
 				fmt.Sprintf("no tag found in %q", gitTagFile),
 				"ensure that it holds a tag in the format vNR.NR.NR such as v1.0.12",
 			}, "\n"))
 	}
-	return nil
+	lines, err := run("git tag")
+	if err != nil {
+		return err
+	}
+	lastTag := ""
+	for _, tag := range lines {
+		if tag == fileTag {
+			return nil
+		}
+		lastTag = tag
+	}
+	errs := []string{
+		fmt.Sprintf("file %q tags this release as %v, but the repository tags is %v", gitTagFile, fileTag, lastTag),
+	}
+	if lastTag < fileTag {
+		errs = append(errs,
+			"increase the repository tag, run:",
+			suggest("git tag -a %v -m $MESSAGE", fileTag),
+		)
+	} else {
+		errs = append(errs,
+			fmt.Sprintf("increase the tag in %q, run:", gitTagFile),
+			suggest("echo '# repository tag, update upon changes' > %v", gitTagFile),
+			suggest("echo %v >> %v", lastTag, gitTagFile))
+	}
+	return errors.New(strings.Join(errs, "\n"))
 }
 
 func run(cmd ...string) ([]string, error) {
-	fmt.Printf("[gogit] running %v\n", strings.Join(cmd, " "))
+	colorstring.Printf("[gogit] [green]running %v\n", strings.Join(cmd, " "))
 	b, err := exec.Command(cmd[0], cmd[1:]...).CombinedOutput()
 	lines := []string{}
 	for _, l := range strings.Split(string(b), "\n") {
@@ -238,9 +284,9 @@ func run(cmd ...string) ([]string, error) {
 		}
 	}
 	if err != nil {
-		fmt.Fprintln(os.Stderr, "[gogit] output:")
+		colorstring.Fprintln(os.Stderr, "[gogit] output:")
 		for _, l := range lines {
-			fmt.Fprintf(os.Stderr, "[gogit] %v\n", l)
+			colorstring.Fprintf(os.Stderr, "[gogit] %v\n", l)
 		}
 	}
 	return lines, err
