@@ -27,6 +27,6 @@ func Title(s string) {
 
 func Msg(s string) {
 	for _, l := range strings.Split(s, "\n") {
-		out("yellow", l)
+		out("green", l)
 	}
 }
