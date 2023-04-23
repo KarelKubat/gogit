@@ -13,20 +13,26 @@ func out(col, msg string) {
 	}
 }
 
-func Error(s string) {
-	for _, l := range strings.Split(s, "\n") {
-		out("red", l)
+func Error(ss ...string) {
+	for _, s := range ss {
+		for _, l := range strings.Split(s, "\n") {
+			out("red", l)
+		}
 	}
 }
 
-func Title(s string) {
-	for _, l := range strings.Split(s, "\n") {
-		out("yellow", l)
+func Title(ss ...string) {
+	for _, s := range ss {
+		for _, l := range strings.Split(s, "\n") {
+			out("yellow", l)
+		}
 	}
 }
 
-func Msg(s string) {
-	for _, l := range strings.Split(s, "\n") {
-		out("green", l)
+func Msg(ss ...string) {
+	for _, s := range ss {
+		for _, l := range strings.Split(s, "\n") {
+			out("green", l)
+		}
 	}
 }
