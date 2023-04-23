@@ -6,6 +6,7 @@ import (
 	"io/fs"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -19,7 +20,7 @@ const (
 	// Message when invoked without args
 	usageInfo = `
 Usage: gogit pre-commit  # or: gogit stdfiles && gogit gotests && gogit govets
-   or: gogit pre-push    # or: gogit allcommitted && gogit gittag
+   or: gogit pre-push    # or: gogit allcommitted && gogit gittag && go haveremote
 
 `
 
@@ -38,17 +39,18 @@ func main() {
 		usage()
 	}
 
-	actions := map[string][]func() error{
+	checks := map[string][]func() error{
 		"pre-commit": {stdFiles, goTests, goVets},
 		"stdfiles":   {stdFiles},
 		"gotests":    {goTests},
 		"govets":     {goVets},
 
-		"pre-push":     {allCommitted, gitTag},
+		"pre-push":     {allCommitted, gitTag, haveRemote},
 		"allcommitted": {allCommitted},
 		"gittag":       {gitTag},
+		"haveremote":   {haveRemote},
 	}
-	funcs, ok := actions[os.Args[1]]
+	funcs, ok := checks[os.Args[1]]
 	if !ok {
 		usage()
 	}
@@ -87,6 +89,8 @@ func hooksInstalled() error {
 	return errs.Err()
 }
 
+var gitTop string
+
 func gotoGitTop() error {
 	out.Title("finding top level git folder")
 	lines, err := run("git", "rev-parse", "--show-toplevel")
@@ -99,8 +103,9 @@ func gotoGitTop() error {
 		lines = append(lines, "need exactly 1 output to find the top level git folder")
 		return errs.Add(lines...)
 	}
-	out.Msg(fmt.Sprintf("top level git folder: %q\n", lines[0]))
-	if err := os.Chdir(lines[0]); err != nil {
+	gitTop = lines[0]
+	out.Msg(fmt.Sprintf("top level git folder: %q\n", gitTop))
+	if err := os.Chdir(gitTop); err != nil {
 		return errs.Add(fmt.Sprintf("cannot chdir to top level git folder: %v", err))
 	}
 	return nil
@@ -252,6 +257,36 @@ func gitTag() error {
 			action.Suggest("echo %v >> %v", lastTag, gitTagFile))
 	}
 	return errors.New(strings.Join(errs, "\n"))
+}
+
+func haveRemote() error {
+	out.Title("checking for configured remote repositories")
+	lines, err := run("git remote")
+	if err != nil {
+		return errs.Add(err.Error())
+	}
+	if len(lines) > 0 {
+		for _, l := range lines {
+			out.Msg(fmt.Sprintf("%q is a remote repository", l))
+		}
+		return nil
+	}
+	var suggestions []string
+	repo := path.Base(gitTop)
+	if strings.Contains(gitTop, "github.com") {
+		_, after, found := strings.Cut(gitTop, "github.com")
+		if !found || after == "" {
+			return errs.Add(fmt.Sprintf("internal jam: failed to parse %q (after:%v, found:%v)", gitTop, after, found))
+		}
+		githubURI := fmt.Sprintf("https://github.com/%v", after)
+		suggestions = append(suggestions,
+			fmt.Sprintf("on github.com add the repository %v, and then:", repo),
+			fmt.Sprintf("git remote add origin %v", githubURI))
+	} else {
+		suggestions = []string{"git remote add $REMOTE"}
+	}
+	errs.Add("no remote repository is configured")
+	return errs.Add(suggestions...)
 }
 
 func run(cmd ...string) ([]string, error) {
