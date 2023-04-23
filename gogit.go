@@ -19,8 +19,13 @@ import (
 const (
 	// Message when invoked without args
 	usageInfo = `
-Usage: gogit pre-commit  # or: gogit stdfiles && gogit gotests && gogit govets
-   or: gogit pre-push    # or: gogit allcommitted && gogit gittag && go haveremote
+Usage:
+  # pre-commit checks
+  gogit pre-commit  # or: gogit stdfiles && gogit gotests && gogit govets
+
+  # pre-push checks
+  gogit pre-commit  # see above, and then:
+  gogit pre-push    # or: gogit allcommitted && gogit gittag && go haveremote
 
 `
 
@@ -45,7 +50,7 @@ func main() {
 		"gotests":    {goTests},
 		"govets":     {goVets},
 
-		"pre-push":     {allCommitted, gitTag, haveRemote},
+		"pre-push":     {stdFiles, goTests, goVets, allCommitted, gitTag, haveRemote},
 		"allcommitted": {allCommitted},
 		"gittag":       {gitTag},
 		"haveremote":   {haveRemote},
