@@ -266,7 +266,7 @@ func gitTag() error {
 
 func haveRemote() error {
 	out.Title("checking for configured remote repositories")
-	lines, err := run("git remote")
+	lines, err := run("git", "remote")
 	if err != nil {
 		return errs.Add(err.Error())
 	}
@@ -286,7 +286,7 @@ func haveRemote() error {
 		githubURI := fmt.Sprintf("https://github.com/%v", after)
 		suggestions = append(suggestions,
 			fmt.Sprintf("on github.com add the repository %v, and then:", repo),
-			fmt.Sprintf("git remote add origin %v", githubURI))
+			fmt.Sprintf("git remote add origin %v.git", githubURI))
 	} else {
 		suggestions = []string{"git remote add $REMOTE"}
 	}
