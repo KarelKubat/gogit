@@ -11,7 +11,8 @@ import (
 	"strings"
 
 	"github.com/KarelKubat/gogit/action"
-	"github.com/mitchellh/colorstring"
+	"github.com/KarelKubat/gogit/errs"
+	"github.com/KarelKubat/gogit/out"
 )
 
 const (
@@ -65,85 +66,72 @@ func usage() {
 
 func check(err error) {
 	if err != nil {
-		for _, l := range strings.Split(err.Error(), "\n") {
-			colorstring.Fprintf(os.Stdout, "[gogit] [red]fatal: %v\n", l)
-		}
+		out.Error(err.Error())
 		action.Output()
 		os.Exit(1)
 	}
 }
 
 func hooksInstalled() error {
-	colorstring.Println("[gogit] [yellow]checking that .git/hooks are installed")
-	errs := []string{}
+	out.Title("checking that .git/hooks are installed")
 	for _, hook := range []string{"pre-commit", "pre-push"} {
 		path := fmt.Sprintf(".git/hooks/%v", hook)
 		_, err := os.Stat(path)
 		if err != nil {
-			errs = append(errs,
+			errs.Add(
 				fmt.Sprintf("hook %q doesn't exist, run:", path),
 				action.Suggest("echo exec gogit %v > %v", hook, path),
 				action.Suggest("chmod +x %v", path))
 		}
 	}
-	if len(errs) > 0 {
-		return errors.New(strings.Join(errs, "\n"))
-	}
-	return nil
+	return errs.Err()
 }
 
 func gotoGitTop() error {
-	colorstring.Println("[gogit] [yellow]finding top level git folder")
+	out.Title("finding top level git folder")
 	lines, err := run("git", "rev-parse", "--show-toplevel")
 	if err != nil {
-		return errors.New(strings.Join([]string{
-			err.Error() + ", try:",
-			action.Suggest("git init"),
-		}, "\n"))
+		return errs.Add(
+			err.Error()+", try:",
+			action.Suggest("git init"))
 	}
 	if len(lines) != 1 {
 		lines = append(lines, "need exactly 1 output to find the top level git folder")
-		return errors.New(strings.Join(lines, "\n"))
+		return errs.Add(lines...)
 	}
-	colorstring.Printf("[gogit] [green]top level git folder: %q\n", lines[0])
+	out.Msg(fmt.Sprintf("top level git folder: %q\n", lines[0]))
 	if err := os.Chdir(lines[0]); err != nil {
-		return fmt.Errorf("cannot chdir to top level git folder: %v", err)
+		return errs.Add(fmt.Sprintf("cannot chdir to top level git folder: %v", err))
 	}
 	return nil
 }
 
 func stdFiles() error {
-	colorstring.Println("[gogit] [yellow]checking that standard files are present")
-	errs := []string{}
+	out.Title("checking that standard files are present")
 	if _, err := os.Stat("README.md"); err != nil {
-		errs = append(errs, "`README.md` not found, create one and retry")
+		errs.Add("`README.md` not found, create one and retry")
 	}
 	if _, err := os.Stat(".gitignore"); err != nil {
-		errs = append(errs,
-			"`.gitignore` not found, create one and retry",
-			"at a minimum run:",
+		errs.Add(
+			"`.gitignore` not found, create one and retry, at a minimum run:",
 			action.Suggest("echo .git > .gitignore"))
 	}
 	if _, err := os.Stat("go.mod"); err != nil {
-		errs = append(errs,
+		errs.Add(
 			"`go.mod` not found, at a minimum run:",
 			action.Suggest("go mod init"),
 			action.Suggest("go mod tidy"))
 	}
-	if len(errs) > 0 {
-		return errors.New(strings.Join(errs, "\n"))
-	}
-	return nil
+	return errs.Err()
 }
 
 func goTests() error {
-	colorstring.Println("[gogit] [yellow]checking for go tests")
-	errs := []string{}
+	out.Title("checking for go tests")
 	srcs := map[string]struct{}{}
 	tests := map[string]struct{}{}
 	filepath.WalkDir(".", func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
-			errs = append(errs, err.Error())
+			errs.Add(err.Error())
 			return err
 		}
 		switch {
@@ -154,14 +142,14 @@ func goTests() error {
 		}
 		return nil
 	})
-	if len(errs) > 0 {
-		return errors.New(strings.Join(errs, "\n"))
+	if errs.Err() != nil {
+		return errs.Err()
 	}
 	testsFound := false
 	for s := range srcs {
 		wantTest := strings.Replace(s, ".go", "_test.go", 1)
 		if _, ok := tests[wantTest]; !ok {
-			errs = append(errs, fmt.Sprintf("go source %q lacks a test %q", s, wantTest))
+			errs.Add(fmt.Sprintf("go source %q lacks a test %q", s, wantTest))
 		} else {
 			testsFound = true
 		}
@@ -169,43 +157,40 @@ func goTests() error {
 	if testsFound {
 		_, err := run("go", "test", "./...")
 		if err != nil {
-			errs = append(errs, err.Error())
+			errs.Add(err.Error())
 		}
 	}
-	if len(errs) > 0 {
-		return errors.New(strings.Join(errs, "\n"))
-	}
-	return nil
+	return errs.Err()
 }
 
 func allCommitted() error {
-	colorstring.Println("[gogit] [yellow]checking that everything is locally committed")
+	out.Title("checking that everything is locally committed")
 	lines, err := run("git", "status")
 	if err != nil {
-		return err
+		errs.Add(err.Error())
+		return errs.Err()
 	}
 	for _, l := range lines {
 		if strings.Contains(l, statusOK) {
 			return nil
 		}
 	}
-	return errors.New(
-		strings.Join(
-			append(lines,
-				"not everything is commited, run:",
-				action.Suggest("git add $FILE(s)"),
-				action.Suggest("git commit -m $MESSAGE")),
-			"\n"))
+	errs.Add(lines...)
+	return errs.Add(
+		"not everything is commited, run:",
+		action.Suggest("git status              # to check what's needed"),
+		action.Suggest("git add $FILE(s)        # to add new files if needed"),
+		action.Suggest("git commit -m $MESSAGE  # to locally commit"))
 }
 
 func goVets() error {
-	colorstring.Println("[gogit] [yellow]checking go vet on local packages")
+	out.Title("checking go vet on local packages")
 	_, err := run("go", "vet", "./...")
 	return err
 }
 
 func gitTag() error {
-	colorstring.Println("[gogit] [yellow]checking for git tag validity")
+	out.Title("checking for git tag validity")
 	_, err := os.Stat(gitTagFile)
 	if err != nil {
 		return errors.New(
@@ -270,7 +255,7 @@ func gitTag() error {
 }
 
 func run(cmd ...string) ([]string, error) {
-	colorstring.Printf("[gogit] [green]running %v\n", strings.Join(cmd, " "))
+	out.Msg(fmt.Sprintf("running %v\n", strings.Join(cmd, " ")))
 	b, err := exec.Command(cmd[0], cmd[1:]...).CombinedOutput()
 	lines := []string{}
 	for _, l := range strings.Split(string(b), "\n") {
@@ -279,9 +264,9 @@ func run(cmd ...string) ([]string, error) {
 		}
 	}
 	if err != nil {
-		colorstring.Fprintln(os.Stderr, "[gogit] output:")
+		out.Error("output:")
 		for _, l := range lines {
-			colorstring.Fprintf(os.Stderr, "[gogit] %v\n", l)
+			out.Error(l)
 		}
 	}
 	return lines, err
