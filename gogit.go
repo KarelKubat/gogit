@@ -7,15 +7,26 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
 const (
+	// Message when invoked without args
 	usageInfo = `
 Usage: gogit pre-commit  # or: gogit stdfiles && gogit gotests
-   or: gogit pre-push    # or: gogit allcommitted
+   or: gogit pre-push    # or: gogit allcommitted && gogit govets && gogit gittag
 
 `
+
+	// `git status` output when nothing needs adding or committing
+	statusOK = "working tree clean"
+
+	// The git tag is tracked in this file
+	gitTagFile = "gittag.txt"
+
+	// Tag format as a regular expression, e.g. v1.0.12
+	tagFormat = `v\d+\.\d+\.\d+`
 )
 
 func main() {
@@ -28,15 +39,17 @@ func main() {
 		"stdfiles":   {stdFiles},
 		"gotests":    {goTests},
 
-		"pre-push":     {allCommitted, goVets},
+		"pre-push":     {allCommitted, goVets, gitTag},
 		"allcommitted": {allCommitted},
 		"govets":       {goVets},
+		"gittag":       {gitTag},
 	}
 	funcs, ok := actions[os.Args[1]]
 	if !ok {
 		usage()
 	}
 	check(gotoGitTop())
+	check(hooksInstalled())
 	for _, f := range funcs {
 		check(f())
 	}
@@ -54,6 +67,24 @@ func check(err error) {
 		}
 		os.Exit(1)
 	}
+}
+
+func hooksInstalled() error {
+	errs := []string{}
+	for _, hook := range []string{"pre-commit", "pre-push"} {
+		path := fmt.Sprintf(".git/hooks/%v", hook)
+		_, err := os.Stat(path)
+		if err != nil {
+			errs = append(errs,
+				fmt.Sprintf("hook %q doesn't exist, run:", path),
+				fmt.Sprintf("  echo exec gogit %v > %v", hook, path),
+				fmt.Sprintf("  chmod +x %v", path))
+		}
+	}
+	if len(errs) > 0 {
+		return errors.New(strings.Join(errs, "\n"))
+	}
+	return nil
 }
 
 func gotoGitTop() error {
@@ -141,7 +172,7 @@ func allCommitted() error {
 		return err
 	}
 	for _, l := range lines {
-		if strings.Contains(l, "working tree clean") {
+		if strings.Contains(l, statusOK) {
 			return nil
 		}
 	}
@@ -157,6 +188,44 @@ func allCommitted() error {
 func goVets() error {
 	_, err := run("go", "vet", "./...")
 	return err
+}
+
+func gitTag() error {
+	_, err := os.Stat(gitTagFile)
+	if err != nil {
+		return errors.New(
+			strings.Join([]string{
+				fmt.Sprintf("%q not found, for a first tagging run:", gitTagFile),
+				fmt.Sprintf("  echo '# repository tag, update upon changes' > %v", gitTagFile),
+				fmt.Sprintf("  echo v0.0.0 >> %v", gitTagFile),
+			}, "\n"))
+	}
+	b, err := os.ReadFile(gitTagFile)
+	if err != nil {
+		return err
+	}
+	foundTag := false
+	for _, l := range strings.Split(string(b), "\n") {
+		if strings.HasPrefix(l, "#") {
+			continue
+		}
+		matched, err := regexp.MatchString(tagFormat, l)
+		if err != nil {
+			return fmt.Errorf("internal jam for regexp %q: %v", tagFormat, err)
+		}
+		if matched {
+			foundTag = true
+			break
+		}
+	}
+	if !foundTag {
+		return errors.New(
+			strings.Join([]string{
+				fmt.Sprintf("no tag found in %q", gitTagFile),
+				"ensure that it holds a tag in the format vNR.NR.NR such as v1.0.12",
+			}, "\n"))
+	}
+	return nil
 }
 
 func run(cmd ...string) ([]string, error) {
