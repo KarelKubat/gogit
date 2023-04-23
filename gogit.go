@@ -74,6 +74,7 @@ func check(err error) {
 }
 
 func hooksInstalled() error {
+	colorstring.Println("[gogit] [yellow]checking that .git/hooks are installed")
 	errs := []string{}
 	for _, hook := range []string{"pre-commit", "pre-push"} {
 		path := fmt.Sprintf(".git/hooks/%v", hook)
@@ -92,6 +93,7 @@ func hooksInstalled() error {
 }
 
 func gotoGitTop() error {
+	colorstring.Println("[gogit] [yellow]finding top level git folder")
 	lines, err := run("git", "rev-parse", "--show-toplevel")
 	if err != nil {
 		return errors.New(strings.Join([]string{
@@ -111,6 +113,7 @@ func gotoGitTop() error {
 }
 
 func stdFiles() error {
+	colorstring.Println("[gogit] [yellow]checking that standard files are present")
 	errs := []string{}
 	if _, err := os.Stat("README.md"); err != nil {
 		errs = append(errs, "`README.md` not found, create one and retry")
@@ -134,6 +137,7 @@ func stdFiles() error {
 }
 
 func goTests() error {
+	colorstring.Println("[gogit] [yellow]checking for go tests")
 	errs := []string{}
 	srcs := map[string]struct{}{}
 	tests := map[string]struct{}{}
@@ -175,6 +179,7 @@ func goTests() error {
 }
 
 func allCommitted() error {
+	colorstring.Println("[gogit] [yellow]checking that everything is locally committed")
 	lines, err := run("git", "status")
 	if err != nil {
 		return err
@@ -194,11 +199,13 @@ func allCommitted() error {
 }
 
 func goVets() error {
+	colorstring.Println("[gogit] [yellow]checking go vet on local packages")
 	_, err := run("go", "vet", "./...")
 	return err
 }
 
 func gitTag() error {
+	colorstring.Println("[gogit] [yellow]checking for git tag validity")
 	_, err := os.Stat(gitTagFile)
 	if err != nil {
 		return errors.New(
