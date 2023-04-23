@@ -18,8 +18,8 @@ import (
 const (
 	// Message when invoked without args
 	usageInfo = `
-Usage: gogit pre-commit  # or: gogit stdfiles && gogit gotests
-   or: gogit pre-push    # or: gogit allcommitted && gogit govets && gogit gittag
+Usage: gogit pre-commit  # or: gogit stdfiles && gogit gotests && gogit govets
+   or: gogit pre-push    # or: gogit allcommitted && gogit gittag
 
 `
 
