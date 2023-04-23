@@ -28,8 +28,9 @@ func main() {
 		"stdfiles":   {stdFiles},
 		"gotests":    {goTests},
 
-		"pre-push":     {allCommitted},
+		"pre-push":     {allCommitted, goVets},
 		"allcommitted": {allCommitted},
+		"govets":       {goVets},
 	}
 	funcs, ok := actions[os.Args[1]]
 	if !ok {
@@ -151,6 +152,11 @@ func allCommitted() error {
 				"  git add $FILE(s)",
 				"  git commit -m $MESSAGE"),
 			"\n"))
+}
+
+func goVets() error {
+	_, err := run("go", "vet", "./...")
+	return err
 }
 
 func run(cmd ...string) ([]string, error) {
