@@ -248,7 +248,7 @@ func gitTag() error {
 		lastTag = tag
 	}
 	errs := []string{
-		fmt.Sprintf("file %q tags this release as %v, but the repository tags is %v", gitTagFile, fileTag, lastTag),
+		fmt.Sprintf("file %q tags this release as %q, but the repository tags is %q", gitTagFile, fileTag, lastTag),
 	}
 	if lastTag < fileTag {
 		errs = append(errs,
