@@ -38,13 +38,13 @@ func main() {
 	}
 
 	actions := map[string][]func() error{
-		"pre-commit": {stdFiles, goTests},
+		"pre-commit": {stdFiles, goTests, goVets},
 		"stdfiles":   {stdFiles},
 		"gotests":    {goTests},
+		"govets":     {goVets},
 
-		"pre-push":     {allCommitted, goVets, gitTag},
+		"pre-push":     {allCommitted, gitTag},
 		"allcommitted": {allCommitted},
-		"govets":       {goVets},
 		"gittag":       {gitTag},
 	}
 	funcs, ok := actions[os.Args[1]]
