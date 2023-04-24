@@ -66,7 +66,7 @@ func main() {
 	}
 	if len(funcs) > 1 {
 		out.Msg(fmt.Sprintf(
-			"git hook %q succeeded, may your favorite git stgoat god smile on you",
+			"git hook %q succeeded, may your favorite git goat god smile on you",
 			os.Args[1]))
 	}
 }
