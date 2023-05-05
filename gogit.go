@@ -215,7 +215,7 @@ func gitTag() error {
 				fmt.Sprintf("%q not found, for a first tagging run:", gitTagFile),
 				action.Suggest("echo '# repository tag, update upon changes' > %v", gitTagFile),
 				action.Suggest("echo v0.0.0 >> %v", gitTagFile),
-				action.Suggest("git tag -a v0.0.0 -m $MESSAGE"),
+				action.Suggest("git tag -a v0.0.0 -m v0.0.0"),
 			}, "\n"))
 	}
 	b, err := os.ReadFile(gitTagFile)
@@ -260,7 +260,7 @@ func gitTag() error {
 	if lastTag < fileTag {
 		errs = append(errs,
 			"increase the repository tag, run:",
-			action.Suggest("git tag -a %v -m $MESSAGE", fileTag),
+			action.Suggest("git tag -a %v -m %v", fileTag, fileTag),
 		)
 	} else {
 		errs = append(errs,
