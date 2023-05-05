@@ -1,6 +1,7 @@
 package run
 
 import (
+	"fmt"
 	"os/exec"
 	"strings"
 
@@ -17,7 +18,7 @@ func Exec(title string, cmd []string) ([]string, error) {
 	}
 
 	out.Title(title)
-	out.Msg("running %v", cli)
+	out.Msg(fmt.Sprintf("running %v", cli))
 	b, err := exec.Command(cmd[0], cmd[1:]...).CombinedOutput()
 	lines := []string{}
 	for _, l := range strings.Split(string(b), "\n") {
