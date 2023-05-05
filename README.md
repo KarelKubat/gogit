@@ -8,7 +8,7 @@
 - [Installation](#installation)
 - [Examples](#examples)
   - [<code>git commit</code> phase](#git-commit-phase)
-    - [Local repository commit](#local-repository-commit)
+    - [Fresh installation of git hooks](#fresh-installation-of-git-hooks)
     - [Some files are expected](#some-files-are-expected)
     - [After adding the files and committing locally](#after-adding-the-files-and-committing-locally)
   - [<code>git push</code> phase](#git-push-phase)
