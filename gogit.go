@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-	"os/exec"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -14,6 +13,7 @@ import (
 	"github.com/KarelKubat/gogit/action"
 	"github.com/KarelKubat/gogit/errs"
 	"github.com/KarelKubat/gogit/out"
+	"github.com/KarelKubat/gogit/run"
 )
 
 const (
@@ -104,8 +104,8 @@ func hooksInstalled() error {
 var gitTop string
 
 func gotoGitTop() error {
-	out.Title("finding top level git folder")
-	lines, err := run("git", "rev-parse", "--show-toplevel")
+	lines, err := run.Exec("finding top level git folder",
+		[]string{"git", "rev-parse", "--show-toplevel"})
 	if err != nil {
 		return errs.Add(
 			err.Error()+", try:",
@@ -172,7 +172,8 @@ func goTests() error {
 		}
 	}
 	if testsFound {
-		_, err := run("go", "test", "./...")
+		_, err := run.Exec("running go tests",
+			[]string{"go", "test", "./..."})
 		if err != nil {
 			errs.Add(err.Error())
 		}
@@ -181,8 +182,8 @@ func goTests() error {
 }
 
 func allCommitted() error {
-	out.Title("checking that everything is locally committed")
-	lines, err := run("git", "status")
+	lines, err := run.Exec("checking that everything is locally committed",
+		[]string{"git", "status"})
 	if err != nil {
 		errs.Add(err.Error())
 		return errs.Err()
@@ -201,8 +202,8 @@ func allCommitted() error {
 }
 
 func goVets() error {
-	out.Title("checking go vet on local packages")
-	_, err := run("go", "vet", "./...")
+	_, err := run.Exec("checking go vet on local packages",
+		[]string{"go", "vet", "./..."})
 	return err
 }
 
@@ -243,7 +244,8 @@ func gitTag() error {
 				"ensure that it holds a tag in the format vNR.NR.NR such as v1.0.12",
 			}, "\n"))
 	}
-	lines, err := run("git", "tag")
+	lines, err := run.Exec("checking local git tag",
+		[]string{"git", "tag"})
 	if err != nil {
 		return err
 	}
@@ -272,8 +274,8 @@ func gitTag() error {
 }
 
 func haveRemote() error {
-	out.Title("checking for configured remote repositories")
-	lines, err := run("git", "remote")
+	lines, err := run.Exec("checking for remote repositories",
+		[]string{"git", "remote"})
 	if err != nil {
 		return errs.Add(err.Error())
 	}
@@ -299,22 +301,4 @@ func haveRemote() error {
 	}
 	errs.Add("no remote repository is configured")
 	return errs.Add(suggestions...)
-}
-
-func run(cmd ...string) ([]string, error) {
-	out.Msg(fmt.Sprintf("running %v\n", strings.Join(cmd, " ")))
-	b, err := exec.Command(cmd[0], cmd[1:]...).CombinedOutput()
-	lines := []string{}
-	for _, l := range strings.Split(string(b), "\n") {
-		if l != "" {
-			lines = append(lines, l)
-		}
-	}
-	if err != nil {
-		out.Error("output:")
-		for _, l := range lines {
-			out.Error(l)
-		}
-	}
-	return lines, err
 }
