@@ -39,7 +39,7 @@ The purpose of `gogit` is to ensure some repository sanity, and to suggest steps
 
 ## Installation
 
-Get the repository and just `go install gittag.go`.
+Get the repository and just `go install gittag.go`. Then the first thing you'll want to do, is `cd` into a respository, run `gogit hooks`, and follow the instructions.
 
 ## Examples
 
@@ -51,7 +51,7 @@ The listings below are a few examples of what `gogit` suggests. The output on a 
 
 ```plain
 # Let's ask `gogit` which hooks we need.
-gogit pre-commit
+gogit hooks
 [gogit] finding top level git folder
 [gogit] running git rev-parse --show-toplevel
 [gogit] top level git folder: "/Users/karelk/go/src/github.com/KarelKubat/gtpl"

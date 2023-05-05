@@ -20,11 +20,13 @@ const (
 	// Message when invoked without args
 	usageInfo = `
 Usage:
+  # check that we're in a git repository and suggest to install hooks
+  gogit hooks
+
   # pre-commit checks
   gogit pre-commit  # or: gogit stdfiles && gogit gotests && gogit govets
 
-  # pre-push checks
-  gogit pre-commit  # see above, and then:
+  # pre-push checks, runs the above pre-commit checks first
   gogit pre-push    # or: gogit allcommitted && gogit gittag && go haveremote
 
 `
@@ -45,22 +47,22 @@ func main() {
 	}
 
 	checks := map[string][]func() error{
-		"pre-commit": {stdFiles, goTests, goVets},
-		"stdfiles":   {stdFiles},
-		"gotests":    {goTests},
-		"govets":     {goVets},
+		"hooks": {gotoGitTop, hooksInstalled},
 
-		"pre-push":     {stdFiles, goTests, goVets, allCommitted, gitTag, haveRemote},
-		"allcommitted": {allCommitted},
-		"gittag":       {gitTag},
-		"haveremote":   {haveRemote},
+		"pre-commit": {gotoGitTop, hooksInstalled, stdFiles, goTests, goVets},
+		"stdfiles":   {gotoGitTop, hooksInstalled, stdFiles},
+		"gotests":    {gotoGitTop, hooksInstalled, goTests},
+		"govets":     {gotoGitTop, hooksInstalled, goVets},
+
+		"pre-push":     {gotoGitTop, hooksInstalled, stdFiles, goTests, goVets, allCommitted, gitTag, haveRemote},
+		"allcommitted": {gotoGitTop, hooksInstalled, allCommitted},
+		"gittag":       {gotoGitTop, hooksInstalled, gitTag},
+		"haveremote":   {gotoGitTop, hooksInstalled, haveRemote},
 	}
 	funcs, ok := checks[os.Args[1]]
 	if !ok {
 		usage()
 	}
-	check(gotoGitTop())
-	check(hooksInstalled())
 	for _, f := range funcs {
 		check(f())
 	}
