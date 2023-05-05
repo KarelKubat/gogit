@@ -47,7 +47,7 @@ The listings below are a few examples of what `gogit` suggests. The output on a 
 
 ### `git commit` phase
 
-#### Local repository commit
+#### Fresh installation of git hooks
 
 ```plain
 # Let's ask `gogit` which hooks we need.
