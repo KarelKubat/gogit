@@ -44,6 +44,8 @@ Usage:
 	remoteTagFormat = "refs/tags/"
 )
 
+var tagRe = regexp.MustCompile(tagFormat)
+
 func main() {
 	if len(os.Args) != 2 {
 		usage()
@@ -260,16 +262,12 @@ func remoteGitTag() (string, error) {
 			action.Suggest("git push origin v0.0.0"),
 		}, "\n"))
 	}
-	re, err := regexp.Compile(tagFormat)
-	if err != nil {
-		return "", fmt.Errorf("internal jam for regexp %q: %v", tagFormat, err)
-	}
 	tag := ""
 	for _, l := range lines {
 		if !strings.Contains(l, remoteTagFormat) {
 			continue
 		}
-		if t := re.FindString(l); t != "" {
+		if t := tagRe.FindString(l); t != "" {
 			tag = t
 		}
 	}
