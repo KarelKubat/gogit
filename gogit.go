@@ -8,6 +8,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/KarelKubat/gogit/action"
@@ -222,12 +223,12 @@ func gitTag() error {
 	}
 	out.Msg(fmt.Sprintf("local tag: %v, remote tag: %v", localTag, remoteTag))
 	if localTag <= remoteTag {
+		nextTag := nextGitTag(remoteTag)
 		return errors.New(
 			strings.Join([]string{
 				"the local tag must indicate a higher version than the remote one",
 				"increase the local tag first, run:",
-				action.Suggest("VERSION=v3.14.15  # example"),
-				action.Suggest("git tag -a $VERSION -m $VERSION"),
+				action.Suggest("git tag -a %v -m %v", nextTag, nextTag),
 			}, "\n"))
 	}
 	out.Msg(fmt.Sprintf("local tag %v will need pushing to remote, remember to run:", localTag))
@@ -281,6 +282,22 @@ func remoteGitTag() (string, error) {
 		return "", errors.New(strings.Join(errs, "\n"))
 	}
 	return tag, nil
+}
+
+func nextGitTag(currentTag string) string {
+	if !tagRe.MatchString(currentTag) {
+		return "$TAG"
+	}
+	parts := strings.Split(currentTag, ".")
+	if len(parts) != 3 {
+		return "$TAG"
+	}
+	lastNr, err := strconv.Atoi(parts[2])
+	if err != nil {
+		return "$TAG"
+	}
+	parts[2] = fmt.Sprintf("%d", lastNr+1)
+	return strings.Join(parts, ".")
 }
 
 func haveRemote() error {
