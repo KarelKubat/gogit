@@ -69,6 +69,7 @@ func main() {
 	for _, f := range funcs {
 		check(f())
 	}
+	action.Output()
 }
 
 func usage() {
