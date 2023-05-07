@@ -227,69 +227,9 @@ func gitTag() error {
 				action.Suggest("git tag -a $VERSION -m $VERSION"),
 			}, "\n"))
 	}
-
-	_, err = os.Stat(gitTagFile)
-	if err != nil {
-		return errors.New(
-			strings.Join([]string{
-				fmt.Sprintf("%q not found, for a first tagging run:", gitTagFile),
-				action.Suggest("echo '# repository tag, update upon changes' > %v", gitTagFile),
-				action.Suggest("echo v0.0.0 >> %v", gitTagFile),
-				action.Suggest("git tag -a v0.0.0 -m v0.0.0"),
-			}, "\n"))
-	}
-	b, err := os.ReadFile(gitTagFile)
-	if err != nil {
-		return err
-	}
-	fileTag := ""
-	for _, l := range strings.Split(string(b), "\n") {
-		if strings.HasPrefix(l, "#") {
-			continue
-		}
-		matched, err := regexp.MatchString(tagFormat, l)
-		if err != nil {
-			return fmt.Errorf("internal jam for regexp %q: %v", tagFormat, err)
-		}
-		if matched {
-			fileTag = l
-			break
-		}
-	}
-	if fileTag == "" {
-		return errors.New(
-			strings.Join([]string{
-				fmt.Sprintf("no tag found in %q", gitTagFile),
-				"ensure that it holds a tag in the format vNR.NR.NR such as v1.0.12",
-			}, "\n"))
-	}
-	lines, err := run.Exec("checking local git tag",
-		[]string{"git", "tag"})
-	if err != nil {
-		return err
-	}
-	lastTag := ""
-	for _, tag := range lines {
-		if tag == fileTag {
-			return nil
-		}
-		lastTag = tag
-	}
-	errs := []string{
-		fmt.Sprintf("file %q tags this release as %q, but the repository tags is %q", gitTagFile, fileTag, lastTag),
-	}
-	if lastTag < fileTag {
-		errs = append(errs,
-			"increase the repository tag, run:",
-			action.Suggest("git tag -a %v -m %v", fileTag, fileTag),
-		)
-	} else {
-		errs = append(errs,
-			fmt.Sprintf("increase the tag in %q, run:", gitTagFile),
-			action.Suggest("echo '# repository tag, update upon changes' > %v", gitTagFile),
-			action.Suggest("echo %v >> %v", lastTag, gitTagFile))
-	}
-	return errors.New(strings.Join(errs, "\n"))
+	out.Msg(fmt.Sprintf("local tag %v will need pushing to remote, remember to run:", localTag))
+	out.Msg(action.Suggest("git push origin %v", localTag))
+	return nil
 }
 
 func localGitTag() (string, error) {
