@@ -27,7 +27,7 @@ Usage:
   gogit pre-commit  # or: gogit stdfiles && gogit gotests && gogit govets
 
   # pre-push checks, runs the above pre-commit checks first
-  gogit pre-push    # or: gogit allcommitted && gogit gittag && go haveremote
+  gogit pre-push    # or: gogit allcommitted && gogit haveremote && gogit gittag
 
 `
 
@@ -39,6 +39,9 @@ Usage:
 
 	// Tag format as a regular expression, e.g. v1.0.12
 	tagFormat = `v\d+\.\d+\.\d+`
+
+	// Expected substring in output of `git ls-remote --tags` to find a tag
+	remoteTagFormat = "refs/tags/"
 )
 
 func main() {
@@ -54,10 +57,10 @@ func main() {
 		"gotests":    {gotoGitTop, hooksInstalled, goTests},
 		"govets":     {gotoGitTop, hooksInstalled, goVets},
 
-		"pre-push":     {gotoGitTop, hooksInstalled, stdFiles, goTests, goVets, allCommitted, gitTag, haveRemote},
+		"pre-push":     {gotoGitTop, hooksInstalled, stdFiles, goTests, goVets, allCommitted, haveRemote, gitTag},
 		"allcommitted": {gotoGitTop, hooksInstalled, allCommitted},
-		"gittag":       {gotoGitTop, hooksInstalled, gitTag},
 		"haveremote":   {gotoGitTop, hooksInstalled, haveRemote},
+		"gittag":       {gotoGitTop, hooksInstalled, gitTag},
 	}
 	funcs, ok := checks[os.Args[1]]
 	if !ok {
@@ -125,8 +128,10 @@ func gotoGitTop() error {
 
 func stdFiles() error {
 	out.Title("checking that standard files are present")
-	if _, err := os.Stat("README.md"); err != nil {
-		errs.Add("`README.md` not found, create one and retry")
+	for _, md := range []string{"README.md", "LICENSE.md"} {
+		if _, err := os.Stat(md); err != nil {
+			errs.Add(fmt.Sprintf("file %v not found, create one and retry", md))
+		}
 	}
 	if _, err := os.Stat(".gitignore"); err != nil {
 		errs.Add(
@@ -209,7 +214,26 @@ func goVets() error {
 
 func gitTag() error {
 	out.Title("checking for git tag validity")
-	_, err := os.Stat(gitTagFile)
+	localTag, err := localGitTag()
+	if err != nil {
+		return err
+	}
+	remoteTag, err := remoteGitTag()
+	if err != nil {
+		return err
+	}
+	out.Msg(fmt.Sprintf("local tag: %v, remote tag: %v", localTag, remoteTag))
+	if localTag <= remoteTag {
+		return errors.New(
+			strings.Join([]string{
+				"the local tag must indicate a higher version than the remote one",
+				"increase the local tag first, run:",
+				action.Suggest("VERSION=v3.14.15  # example"),
+				action.Suggest("git tag -a $VERSION -m $VERSION"),
+			}, "\n"))
+	}
+
+	_, err = os.Stat(gitTagFile)
 	if err != nil {
 		return errors.New(
 			strings.Join([]string{
@@ -271,6 +295,58 @@ func gitTag() error {
 			action.Suggest("echo %v >> %v", lastTag, gitTagFile))
 	}
 	return errors.New(strings.Join(errs, "\n"))
+}
+
+func localGitTag() (string, error) {
+	lines, err := run.Exec("checking local git tag",
+		[]string{"git", "tag"})
+	if err != nil {
+		return "", err
+	}
+	if len(lines) < 1 {
+		return "", errors.New(strings.Join([]string{
+			"local tag not found, for a first tagging, run:",
+			action.Suggest("git tag -a v0.0.0 -m v0.0.0"),
+		}, "\n"))
+	}
+	return lines[len(lines)-1], nil
+}
+
+func remoteGitTag() (string, error) {
+	lines, err := run.Exec("checking remote git tag",
+		[]string{"git", "ls-remote", "--tags"})
+	if err != nil {
+		return "", err
+	}
+	if len(lines) < 2 {
+		return "", errors.New(strings.Join([]string{
+			"remote tag not found, for a first tagging, run:",
+			action.Suggest("git push origin v0.0.0"),
+		}, "\n"))
+	}
+	re, err := regexp.Compile(tagFormat)
+	if err != nil {
+		return "", fmt.Errorf("internal jam for regexp %q: %v", tagFormat, err)
+	}
+	tag := ""
+	for _, l := range lines {
+		if !strings.Contains(l, remoteTagFormat) {
+			continue
+		}
+		if t := re.FindString(l); t != "" {
+			tag = t
+		}
+	}
+	if tag == "" {
+		errs := []string{
+			"remote tags could not be parsed, for a first tagging, run:",
+			action.Suggest("git tag -a v0.0.0 -m v0.0.0"),
+			"output of command was:",
+		}
+		errs = append(errs, lines...)
+		return "", errors.New(strings.Join(errs, "\n"))
+	}
+	return tag, nil
 }
 
 func haveRemote() error {
