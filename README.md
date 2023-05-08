@@ -11,6 +11,7 @@
     - [Fresh installation of git hooks](#fresh-installation-of-git-hooks)
     - [Some files are expected](#some-files-are-expected)
     - [After adding the files and committing locally](#after-adding-the-files-and-committing-locally)
+    - [Suggestion to automatically refresh the Table of Contents](#suggestion-to-automatically-refresh-the-table-of-contents)
   - [<code>git push</code> phase](#git-push-phase)
     - [We need a local tag](#we-need-a-local-tag)
     - [Local tag should be pushed to remote](#local-tag-should-be-pushed-to-remote)
