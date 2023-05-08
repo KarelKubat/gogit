@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -25,7 +26,7 @@ Usage:
   gogit hooks
 
   # pre-commit checks
-  gogit pre-commit  # or: gogit stdfiles && gogit gotests && gogit govets
+  gogit pre-commit  # or: gogit stdfiles && gogit gotests && gogit govets && gogit mdtoc
 
   # pre-push checks, runs the above pre-commit checks first
   gogit pre-push    # or: gogit allcommitted && gogit haveremote && gogit gittag
@@ -43,6 +44,10 @@ Usage:
 
 	// Expected substring in output of `git ls-remote --tags` to find a tag
 	remoteTagFormat = "refs/tags/"
+
+	// Tags in README.md to refresh the ToC
+	tocStart = "<!-- toc -->"
+	tocEnd   = "<!-- /toc -->"
 )
 
 var tagRe = regexp.MustCompile(tagFormat)
@@ -55,12 +60,13 @@ func main() {
 	checks := map[string][]func() error{
 		"hooks": {gotoGitTop, hooksInstalled},
 
-		"pre-commit": {gotoGitTop, hooksInstalled, stdFiles, goTests, goVets},
+		"pre-commit": {gotoGitTop, hooksInstalled, stdFiles, goTests, goVets, mdToc},
 		"stdfiles":   {gotoGitTop, hooksInstalled, stdFiles},
 		"gotests":    {gotoGitTop, hooksInstalled, goTests},
 		"govets":     {gotoGitTop, hooksInstalled, goVets},
+		"mdtoc":      {mdToc},
 
-		"pre-push":     {gotoGitTop, hooksInstalled, stdFiles, goTests, goVets, allCommitted, haveRemote, gitTag},
+		"pre-push":     {gotoGitTop, hooksInstalled, stdFiles, goTests, goVets, mdToc, allCommitted, haveRemote, gitTag},
 		"allcommitted": {gotoGitTop, hooksInstalled, allCommitted},
 		"haveremote":   {gotoGitTop, hooksInstalled, haveRemote},
 		"gittag":       {gotoGitTop, hooksInstalled, gitTag},
@@ -211,6 +217,39 @@ func goVets() error {
 	return err
 }
 
+func mdToc() error {
+	b, err := ioutil.ReadFile("README.md")
+	if err != nil {
+		return err
+	}
+	nTags := 0
+	for _, l := range strings.Split(string(b), "\n") {
+		if strings.HasPrefix(l, tocStart) || strings.HasPrefix(l, tocEnd) {
+			nTags++
+		}
+	}
+	switch nTags {
+	case 0:
+		out.Error(strings.Join([]string{
+			"(Not fatal) README.md has no Table of Contents section",
+			"to have the TOC automatically updated, run:",
+			action.Suggest("go install github.com/kubernetes-sigs/mdtoc@latest"),
+			action.Suggest("add   %v    to README.md (at first column)", tocStart),
+			action.Suggest("add   %v   to README.md (at first column)", tocEnd),
+		}, "\n"))
+		return nil
+	case 2:
+		_, err := run.Exec("refreshing README.md TOC",
+			[]string{"mdtoc", "--inplace", "README.md"})
+		if err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("README.md must contain exactly one tag `%v` and one tag `%v`, found: %v", tocStart, tocEnd, nTags)
+	}
+	return nil // to satisfy the signature
+}
+
 func gitTag() error {
 	out.Title("checking for git tag validity")
 	localTag, err := localGitTag()
@@ -221,8 +260,8 @@ func gitTag() error {
 	if err != nil {
 		return err
 	}
-	out.Msg(fmt.Sprintf("local tag: %v, remote tag: %v", localTag, remoteTag))
-	if localTag <= remoteTag {
+	out.Msg(fmt.Sprintf("local tag: %q, remote tag: %q", localTag, remoteTag))
+	if remoteTag != "" && localTag <= remoteTag {
 		nextTag := nextGitTag(remoteTag)
 		return errors.New(
 			strings.Join([]string{
@@ -258,10 +297,7 @@ func remoteGitTag() (string, error) {
 		return "", err
 	}
 	if len(lines) < 2 {
-		return "", errors.New(strings.Join([]string{
-			"remote tag not found, for a first tagging, run:",
-			action.Suggest("git push origin v0.0.0"),
-		}, "\n"))
+		return "", nil
 	}
 	tag := ""
 	for _, l := range lines {
