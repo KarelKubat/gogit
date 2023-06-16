@@ -26,7 +26,7 @@
 In the pre-commit phase, it checks:
 
 - That the usual files are present, a `README.md`, `LICENCE.MD`, a `.gitignore`, plus `go.mod` and `go.sum`,
-- That `.go` files have corresponding `_test.go` tests,
+- That `.go` files have corresponding `_test.go` tests (if not, dummy test frames can be created),
 - That the tests pass,
 - That `govet` is happy,
 - When `README.md` isn't set up for automatic table of contents management, actions are suggested to enable this.
