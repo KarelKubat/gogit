@@ -1,8 +1,5 @@
 # gogit
 
-<!-- REMEMBER TO RUN:
-  mdtoc --inplace README.md
--->
 <!-- toc -->
 - [What it does](#what-it-does)
 - [Installation](#installation)
@@ -42,7 +39,7 @@ The purpose of `gogit` is to ensure some repository sanity, and to suggest steps
 
 ## Installation
 
-Get the repository and just `go install gittag.go`. Then the first thing you'll want to do, is `cd` into a respository, run `gogit hooks`, and follow the instructions.
+Get the repository and just `go install gogit.go`. Then the first thing you'll want to do, is `cd` into a respository, run `gogit hooks`, and follow the instructions.
 
 ## Examples
 
