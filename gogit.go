@@ -16,6 +16,7 @@ import (
 	"github.com/KarelKubat/gogit/errs"
 	"github.com/KarelKubat/gogit/out"
 	"github.com/KarelKubat/gogit/run"
+	"github.com/KarelKubat/gogit/testframe"
 )
 
 const (
@@ -30,6 +31,9 @@ Usage:
 
   # pre-push checks, runs the above pre-commit checks first
   gogit pre-push    # or: gogit allcommitted && gogit haveremote && gogit gittag
+
+  # create a test frame for .go sources
+  gogit make-test-frame a.go sub/b.go  # creates a_test.go and sub/b_test.go
 
 `
 
@@ -53,6 +57,18 @@ Usage:
 var tagRe = regexp.MustCompile(tagFormat)
 
 func main() {
+	// `gogit make-test-frame $GO_SRC` is a special case.
+	if len(os.Args) >= 2 && os.Args[1] == "make-test-frame" {
+		if len(os.Args) == 2 {
+			usage()
+		}
+		for _, s := range os.Args[2:] {
+			check(testframe.Make(s))
+		}
+		os.Exit(0)
+	}
+
+	// All other invocations have just one argument: the action to perform.
 	if len(os.Args) != 2 {
 		usage()
 	}
@@ -173,10 +189,12 @@ func goTests() error {
 		return errs.Err()
 	}
 	testsFound := false
+	suggestFrames := []string{}
 	for s := range srcs {
 		wantTest := strings.Replace(s, ".go", "_test.go", 1)
 		if _, ok := tests[wantTest]; !ok {
 			errs.Add(fmt.Sprintf("go source %q lacks a test %q", s, wantTest))
+			suggestFrames = append(suggestFrames, s)
 		} else {
 			testsFound = true
 		}
@@ -186,6 +204,12 @@ func goTests() error {
 			[]string{"go", "test", "./..."})
 		if err != nil {
 			errs.Add(err.Error())
+		}
+	}
+	if len(suggestFrames) > 0 {
+		errs.Add("at a minimum run:")
+		for _, frame := range suggestFrames {
+			action.Suggest("gogit make-test-frame %v", frame)
 		}
 	}
 	return errs.Err()
