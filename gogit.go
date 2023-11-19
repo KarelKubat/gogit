@@ -291,7 +291,8 @@ func gitTag() error {
 			strings.Join([]string{
 				"the local tag must indicate a higher version than the remote one",
 				"increase the local tag first, run:",
-				action.Suggest("git tag -a %v -m %v && git push origin %v", nextTag, nextTag, nextTag),
+				action.Suggest("git tag -a %v -m %v", nextTag, nextTag),
+				action.Suggest("git push"),
 			}, "\n"))
 	}
 	out.Msg(fmt.Sprintf("local tag %v will need pushing to remote, remember to run:", localTag))
