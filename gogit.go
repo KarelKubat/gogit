@@ -293,6 +293,7 @@ func gitTag() error {
 				"increase the local tag first, run:",
 				action.Suggest("git tag -a %v -m %v", nextTag, nextTag),
 				action.Suggest("git push"),
+				action.Suggest("git push origin %v", nextTag),
 			}, "\n"))
 	}
 	out.Msg(fmt.Sprintf("local tag %v will need pushing to remote, remember to run:", localTag))
