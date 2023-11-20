@@ -289,11 +289,15 @@ func gitTag() error {
 		nextTag := nextGitTag(remoteTag)
 		return errors.New(
 			strings.Join([]string{
-				"the local tag must indicate a higher version than the remote one",
+				"the local tag should indicate a higher version than the remote one",
 				"increase the local tag first, run:",
+				action.Suggest("# to increase the tag ID and push:"),
 				action.Suggest("git tag -a %v -m %v", nextTag, nextTag),
 				action.Suggest("git push"),
 				action.Suggest("git push origin %v", nextTag),
+				"alternatively, to stay on the same tag number, run:",
+				action.Suggest("# to stay on the same tag ID, run:"),
+				action.Suggest("git push --no_verify"),
 			}, "\n"))
 	}
 	out.Msg(fmt.Sprintf("local tag %v will need pushing to remote, remember to run:", localTag))
