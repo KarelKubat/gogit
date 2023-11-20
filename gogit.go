@@ -318,7 +318,7 @@ func localGitTag() (string, error) {
 			}, "\n"))
 		}
 	}
-	return tgs.Highest()
+	return tgs.Highest(), nil
 }
 
 func remoteGitTag() (string, error) {
@@ -350,7 +350,7 @@ func remoteGitTag() (string, error) {
 	if !tgs.HasTags() {
 		return "", nil
 	}
-	return tgs.Highest()
+	return tgs.Highest(), nil
 }
 
 func haveRemote() error {
