@@ -8,14 +8,13 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"regexp"
-	"strconv"
 	"strings"
 
 	"github.com/KarelKubat/gogit/action"
 	"github.com/KarelKubat/gogit/errs"
 	"github.com/KarelKubat/gogit/out"
 	"github.com/KarelKubat/gogit/run"
+	"github.com/KarelKubat/gogit/tags"
 	"github.com/KarelKubat/gogit/testframe"
 )
 
@@ -40,12 +39,6 @@ Usage:
 	// `git status` output when nothing needs adding or committing
 	statusOK = "working tree clean"
 
-	// The git tag is tracked in this file
-	gitTagFile = "gittag.txt"
-
-	// Tag format as a regular expression, e.g. v1.0.12
-	tagFormat = `v\d+\.\d+\.\d+`
-
 	// Expected substring in output of `git ls-remote --tags` to find a tag
 	remoteTagFormat = "refs/tags/"
 
@@ -53,8 +46,6 @@ Usage:
 	tocStart = "<!-- toc -->"
 	tocEnd   = "<!-- /toc -->"
 )
-
-var tagRe = regexp.MustCompile(tagFormat)
 
 func main() {
 	// `gogit make-test-frame $GO_SRC` is a special case.
@@ -286,7 +277,7 @@ func gitTag() error {
 	}
 	out.Msg(fmt.Sprintf("local tag: %q, remote tag: %q", localTag, remoteTag))
 	if remoteTag != "" && localTag <= remoteTag {
-		nextTag := nextGitTag(remoteTag)
+		nextTag := tags.Next(remoteTag)
 		return errors.New(
 			strings.Join([]string{
 				"the local tag should indicate a higher version than the remote one",
@@ -317,7 +308,17 @@ func localGitTag() (string, error) {
 			action.Suggest("git tag -a v0.0.0 -m v0.0.0"),
 		}, "\n"))
 	}
-	return lines[len(lines)-1], nil
+	tgs := tags.New()
+	for _, l := range lines {
+		if err = tgs.Add(l); err != nil {
+			return "", errors.New(strings.Join([]string{
+				err.Error(),
+				"manually correct using:",
+				action.Suggest("git tag -d %v", l),
+			}, "\n"))
+		}
+	}
+	return tgs.Highest()
 }
 
 func remoteGitTag() (string, error) {
@@ -329,41 +330,27 @@ func remoteGitTag() (string, error) {
 	if len(lines) < 2 {
 		return "", nil
 	}
-	tag := ""
+	tgs := tags.New()
 	for _, l := range lines {
 		if !strings.Contains(l, remoteTagFormat) {
 			continue
 		}
-		if t := tagRe.FindString(l); t != "" {
-			tag = t
+		if t := tags.TagRe.FindString(l); t != "" {
+			if err := tgs.Add(t); err != nil {
+				errs := []string{
+					"remote tags could not be parsed, for a first tagging, run:",
+					action.Suggest("git tag -a v0.0.0 -m v0.0.0"),
+					"output of command was:",
+				}
+				errs = append(errs, lines...)
+				return "", errors.New(strings.Join(errs, "\n"))
+			}
 		}
 	}
-	if tag == "" {
-		errs := []string{
-			"remote tags could not be parsed, for a first tagging, run:",
-			action.Suggest("git tag -a v0.0.0 -m v0.0.0"),
-			"output of command was:",
-		}
-		errs = append(errs, lines...)
-		return "", errors.New(strings.Join(errs, "\n"))
+	if !tgs.HasTags() {
+		return "", nil
 	}
-	return tag, nil
-}
-
-func nextGitTag(currentTag string) string {
-	if !tagRe.MatchString(currentTag) {
-		return "$TAG"
-	}
-	parts := strings.Split(currentTag, ".")
-	if len(parts) != 3 {
-		return "$TAG"
-	}
-	lastNr, err := strconv.Atoi(parts[2])
-	if err != nil {
-		return "$TAG"
-	}
-	parts[2] = fmt.Sprintf("%d", lastNr+1)
-	return strings.Join(parts, ".")
+	return tgs.Highest()
 }
 
 func haveRemote() error {
