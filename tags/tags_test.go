@@ -49,7 +49,7 @@ func TestAll(t *testing.T) {
 			t.Errorf("HasTags() = %v, want %v", gotHasTags, wantHasTags)
 		}
 
-		if gotHigh := tgs.Highest(); gotHigh != test.wantHigh {
+		if gotHigh := tgs.Highest().String(); gotHigh != test.wantHigh {
 			t.Errorf("Highest() = %q, want %q", gotHigh, test.wantHigh)
 		}
 	}
@@ -81,7 +81,7 @@ func TestNext(t *testing.T) {
 			wantNext: "$TAG",
 		},
 	} {
-		if gotNext := Next(test.s); gotNext != test.wantNext {
+		if gotNext := NextTag(test.s); gotNext != test.wantNext {
 			t.Errorf("Next(%q) = %q, want %q", test.s, gotNext, test.wantNext)
 		}
 	}

@@ -276,14 +276,14 @@ func gitTag() error {
 		return err
 	}
 	out.Msg(fmt.Sprintf("local tag: %q, remote tag: %q", localTag, remoteTag))
-	if remoteTag != "" && localTag <= remoteTag {
-		nextTag := tags.Next(remoteTag)
+	if !remoteTag.IsZero() && localTag.Less(remoteTag) {
+		nextTag := remoteTag.Next()
 		return errors.New(
 			strings.Join([]string{
 				"the local tag should indicate a higher version than the remote one",
 				"increase the local tag first, run:",
 				action.Suggest("# to increase the tag ID and push:"),
-				action.Suggest("git tag -a %v -m %v", nextTag, nextTag),
+				action.Suggest("git tag -a %v -m %v  # or increase major/minor numbers", nextTag, nextTag),
 				action.Suggest("git push"),
 				action.Suggest("git push origin %v", nextTag),
 				"alternatively, to stay on the same tag number, run:",
@@ -296,14 +296,14 @@ func gitTag() error {
 	return nil
 }
 
-func localGitTag() (string, error) {
+func localGitTag() (tags.Tag, error) {
 	lines, err := run.Exec("checking local git tag",
 		[]string{"git", "tag"})
 	if err != nil {
-		return "", err
+		return tags.Tag{}, err
 	}
 	if len(lines) < 1 {
-		return "", errors.New(strings.Join([]string{
+		return tags.Tag{}, errors.New(strings.Join([]string{
 			"local tag not found, for a first tagging, run:",
 			action.Suggest("git tag -a v0.0.0 -m v0.0.0"),
 		}, "\n"))
@@ -311,7 +311,7 @@ func localGitTag() (string, error) {
 	tgs := tags.New()
 	for _, l := range lines {
 		if err = tgs.Add(l); err != nil {
-			return "", errors.New(strings.Join([]string{
+			return tags.Tag{}, errors.New(strings.Join([]string{
 				err.Error(),
 				"manually correct using:",
 				action.Suggest("git tag -d %v", l),
@@ -321,14 +321,14 @@ func localGitTag() (string, error) {
 	return tgs.Highest(), nil
 }
 
-func remoteGitTag() (string, error) {
+func remoteGitTag() (tags.Tag, error) {
 	lines, err := run.Exec("checking remote git tag",
 		[]string{"git", "ls-remote", "--tags"})
 	if err != nil {
-		return "", err
+		return tags.Tag{}, err
 	}
 	if len(lines) < 2 {
-		return "", nil
+		return tags.Tag{}, nil
 	}
 	tgs := tags.New()
 	for _, l := range lines {
@@ -343,12 +343,12 @@ func remoteGitTag() (string, error) {
 					"output of command was:",
 				}
 				errs = append(errs, lines...)
-				return "", errors.New(strings.Join(errs, "\n"))
+				return tags.Tag{}, errors.New(strings.Join(errs, "\n"))
 			}
 		}
 	}
 	if !tgs.HasTags() {
-		return "", nil
+		return tags.Tag{}, nil
 	}
 	return tgs.Highest(), nil
 }
