@@ -82,11 +82,32 @@ func ParseTag(s string) (Tag, error) {
 }
 
 func (tg *Tag) Less(ot Tag) bool {
-	return tg.major < ot.major || tg.minor < ot.minor || tg.detail < ot.detail
+	switch {
+	case tg.major < ot.major:
+		return true
+	case tg.major > ot.major:
+		return false
+	case tg.minor < ot.minor:
+		return true
+	case tg.minor > ot.minor:
+		return false
+	case tg.detail < ot.detail:
+		return true
+	case tg.detail > ot.detail:
+		return false
+	default:
+		return false
+	}
 }
 
 func (tg *Tag) Greater(ot Tag) bool {
-	return tg.major > ot.major || tg.minor > ot.minor || tg.detail > ot.detail
+	if tg.Less(ot) {
+		return false
+	}
+	if tg.major == ot.major && tg.minor == ot.minor && tg.detail == ot.detail {
+		return false
+	}
+	return true
 }
 
 func (tg Tag) String() string {

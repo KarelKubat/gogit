@@ -86,3 +86,53 @@ func TestNext(t *testing.T) {
 		}
 	}
 }
+
+func TestLessGreater(t *testing.T) {
+	for _, test := range []struct {
+		tg          Tag
+		ot          Tag
+		wantLess    bool
+		wantGreater bool
+	}{
+		{
+			tg:          Tag{1, 2, 3},
+			ot:          Tag{1, 2, 3},
+			wantLess:    false,
+			wantGreater: false,
+		},
+		{
+			tg:          Tag{1, 2, 3},
+			ot:          Tag{1, 2, 4},
+			wantLess:    true,
+			wantGreater: false,
+		},
+		{
+			tg:          Tag{1, 2, 4},
+			ot:          Tag{1, 2, 3},
+			wantLess:    false,
+			wantGreater: true,
+		},
+		{
+			tg:          Tag{1, 2, 3},
+			ot:          Tag{10, 2, 4},
+			wantLess:    true,
+			wantGreater: false,
+		},
+		{
+			tg:          Tag{10, 2, 4},
+			ot:          Tag{1, 2, 3},
+			wantLess:    false,
+			wantGreater: true,
+		},
+		{
+			tg:          Tag{2, 0, 0},
+			ot:          Tag{1, 0, 10},
+			wantLess:    false,
+			wantGreater: true,
+		},
+	} {
+		if gotLess := test.tg.Less(test.ot); gotLess != test.wantLess {
+			t.Errorf("%+v .Less(%+v): got %v, want %v", test.tg, test.ot, gotLess, test.wantLess)
+		}
+	}
+}
