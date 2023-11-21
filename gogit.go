@@ -14,6 +14,7 @@ import (
 	"github.com/KarelKubat/gogit/errs"
 	"github.com/KarelKubat/gogit/out"
 	"github.com/KarelKubat/gogit/run"
+	"github.com/KarelKubat/gogit/tag"
 	"github.com/KarelKubat/gogit/tags"
 	"github.com/KarelKubat/gogit/testframe"
 )
@@ -296,14 +297,14 @@ func gitTag() error {
 	return nil
 }
 
-func localGitTag() (tags.Tag, error) {
+func localGitTag() (*tag.Tag, error) {
 	lines, err := run.Exec("checking local git tag",
 		[]string{"git", "tag"})
 	if err != nil {
-		return tags.Tag{}, err
+		return nil, err
 	}
 	if len(lines) < 1 {
-		return tags.Tag{}, errors.New(strings.Join([]string{
+		return nil, errors.New(strings.Join([]string{
 			"local tag not found, for a first tagging, run:",
 			action.Suggest("git tag -a v0.0.0 -m v0.0.0"),
 		}, "\n"))
@@ -311,7 +312,7 @@ func localGitTag() (tags.Tag, error) {
 	tgs := tags.New()
 	for _, l := range lines {
 		if err = tgs.Add(l); err != nil {
-			return tags.Tag{}, errors.New(strings.Join([]string{
+			return nil, errors.New(strings.Join([]string{
 				err.Error(),
 				"manually correct using:",
 				action.Suggest("git tag -d %v", l),
@@ -321,21 +322,21 @@ func localGitTag() (tags.Tag, error) {
 	return tgs.Highest(), nil
 }
 
-func remoteGitTag() (tags.Tag, error) {
+func remoteGitTag() (*tag.Tag, error) {
 	lines, err := run.Exec("checking remote git tag",
 		[]string{"git", "ls-remote", "--tags"})
 	if err != nil {
-		return tags.Tag{}, err
+		return nil, err
 	}
 	if len(lines) < 2 {
-		return tags.Tag{}, nil
+		return nil, nil
 	}
 	tgs := tags.New()
 	for _, l := range lines {
 		if !strings.Contains(l, remoteTagFormat) {
 			continue
 		}
-		if t := tags.TagRe.FindString(l); t != "" {
+		if t := tag.TagRe.FindString(l); t != "" {
 			if err := tgs.Add(t); err != nil {
 				errs := []string{
 					"remote tags could not be parsed, for a first tagging, run:",
@@ -343,12 +344,12 @@ func remoteGitTag() (tags.Tag, error) {
 					"output of command was:",
 				}
 				errs = append(errs, lines...)
-				return tags.Tag{}, errors.New(strings.Join(errs, "\n"))
+				return nil, errors.New(strings.Join(errs, "\n"))
 			}
 		}
 	}
 	if !tgs.HasTags() {
-		return tags.Tag{}, nil
+		return nil, nil
 	}
 	return tgs.Highest(), nil
 }
