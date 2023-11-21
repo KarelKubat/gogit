@@ -192,7 +192,7 @@ func goTests() error {
 	}
 	if testsFound {
 		_, err := run.Exec("running go tests",
-			[]string{"go", "test", "-race", "./..."})
+			[]string{"go", "test", "-race", "-cover", "./..."})
 		if err != nil {
 			errs.Add(err.Error())
 		}
