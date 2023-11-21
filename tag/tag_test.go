@@ -45,6 +45,13 @@ func TestLessGreaterEqual(t *testing.T) {
 		wantEqual   bool
 	}{
 		{
+			tg:          &Tag{Major: 2, Minor: 0, Detail: 0},
+			ot:          &Tag{Major: 2, Minor: 0, Detail: 0},
+			wantLess:    false,
+			wantGreater: false,
+			wantEqual:   true,
+		},
+		{
 			tg:          &Tag{Major: 1, Minor: 2, Detail: 3},
 			ot:          &Tag{Major: 1, Minor: 2, Detail: 3},
 			wantLess:    false,
