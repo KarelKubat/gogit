@@ -100,3 +100,35 @@ func TestLessGreaterEqual(t *testing.T) {
 		}
 	}
 }
+
+func TestIsZero(t *testing.T) {
+	for _, test := range []struct {
+		tg         *Tag
+		wantIsZero bool
+	}{
+		{
+			tg:         nil,
+			wantIsZero: true,
+		},
+		{
+			tg:         &Tag{Major: 0, Minor: 0, Detail: 0},
+			wantIsZero: true,
+		},
+		{
+			tg:         &Tag{Major: 1, Minor: 0, Detail: 0},
+			wantIsZero: false,
+		},
+		{
+			tg:         &Tag{Major: 0, Minor: 1, Detail: 0},
+			wantIsZero: false,
+		},
+		{
+			tg:         &Tag{Major: 0, Minor: 0, Detail: 1},
+			wantIsZero: false,
+		},
+	} {
+		if gotZero := test.tg.IsZero(); gotZero != test.wantIsZero {
+			t.Errorf("%+v .IsZero() = %v, want %v", test.tg, gotZero, test.wantIsZero)
+		}
+	}
+}
