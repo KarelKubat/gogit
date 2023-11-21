@@ -267,7 +267,7 @@ func mdToc() error {
 }
 
 func gitTag() error {
-	out.Title("checking for git tag validity")
+	out.Title("checking git tags")
 	localTag, err := localGitTag()
 	if err != nil {
 		return err
@@ -277,7 +277,7 @@ func gitTag() error {
 		return err
 	}
 	out.Msg(fmt.Sprintf("local tag: %q, remote tag: %q", localTag, remoteTag))
-	if !remoteTag.IsZero() && localTag.Less(remoteTag) {
+	if !remoteTag.IsZero() && !localTag.Greater(remoteTag) {
 		nextTag := remoteTag.Next()
 		return errors.New(
 			strings.Join([]string{
