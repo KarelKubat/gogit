@@ -2,7 +2,6 @@ package testframe
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 )
@@ -37,7 +36,7 @@ func Make(src string) error {
 	}
 
 	// Find the package name
-	content, err := ioutil.ReadFile(src)
+	content, err := os.ReadFile(src)
 	if err != nil {
 		return fmt.Errorf("failed to read %v: %v", src, err)
 	}

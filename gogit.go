@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"io/ioutil"
 	"os"
 	"path"
 	"path/filepath"
@@ -234,7 +233,7 @@ func goVets() error {
 }
 
 func mdToc() error {
-	b, err := ioutil.ReadFile("README.md")
+	b, err := os.ReadFile("README.md")
 	if err != nil {
 		return err
 	}
