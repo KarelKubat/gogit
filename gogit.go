@@ -288,7 +288,7 @@ func gitTag() error {
 				action.Suggest("git push origin %v", nextTag),
 				"alternatively, to stay on the same tag number, run:",
 				action.Suggest("# ---- or: stay on the same tag ID ----"),
-				action.Suggest("git push --no_verify"),
+				action.Suggest("git push --no-verify"),
 			}, "\n"))
 	}
 	out.Msg(fmt.Sprintf("local tag %v will need pushing to remote, remember to run:", localTag))
