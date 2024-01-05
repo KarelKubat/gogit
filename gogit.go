@@ -42,6 +42,12 @@ Usage:
 	// Expected substring in output of `git ls-remote --tags` to find a tag
 	remoteTagFormat = "refs/tags/"
 
+	// Seen in `git status -uno` when the local branch is up to date
+	localIsUpToDateStr = "Your branch is up to date"
+
+	// Seen when the local branch is ahead
+	localIsAheadStr = "Your branch is ahead"
+
 	// Tags in README.md to refresh the ToC
 	tocStart = "<!-- toc -->"
 	tocEnd   = "<!-- /toc -->"
@@ -56,6 +62,10 @@ var (
 
 	// Main package, cached after first lookup
 	mainPackageName string
+
+	// Is the local repo ahead of remote, cached after first lookup
+	localAheadCached bool
+	localAheadStatus bool
 )
 
 func main() {
@@ -84,7 +94,7 @@ func main() {
 		"govets":     {gotoGitTop, hooksInstalled, goVets},
 		"mdtoc":      {mdToc},
 
-		"pre-push":     {gotoGitTop, hooksInstalled, stdFiles, goTests, goVets, mdToc, allCommitted, haveRemote, gitTag, pkgGoDev},
+		"pre-push":     {gotoGitTop, hooksInstalled, stdFiles, goTests, goVets, mdToc, allCommitted, haveRemote, pkgGoDev, gitTag},
 		"allcommitted": {gotoGitTop, hooksInstalled, allCommitted},
 		"haveremote":   {gotoGitTop, hooksInstalled, haveRemote},
 		"gittag":       {gotoGitTop, hooksInstalled, gitTag},
@@ -287,7 +297,11 @@ func gitTag() error {
 		return err
 	}
 	out.Msg("local tag: %q, remote tag: %q", localTag, remoteTag)
-	if !remoteTag.IsZero() && !localTag.Greater(remoteTag) {
+	ahead, err := localIsAhead()
+	if err != nil {
+		return err
+	}
+	if !remoteTag.IsZero() && !localTag.Greater(remoteTag) && ahead {
 		nextTag := remoteTag.Next()
 		return errors.New(
 			strings.Join([]string{
@@ -448,4 +462,29 @@ func mainPackage() (name string, err error) {
 	}
 	mainPackageName = parts[1]
 	return mainPackageName, nil
+}
+
+func localIsAhead() (ahead bool, err error) {
+	if localAheadCached {
+		return localAheadStatus, nil
+	}
+	lines, err := run.Exec("git", []string{"status", "-uno"})
+	if err != nil {
+		return false, err
+	}
+	for _, line := range lines {
+		if strings.HasPrefix(line, localIsAheadStr) {
+			out.Msg("local repository is ahead of remote")
+			localAheadCached = true
+			localAheadStatus = true
+			return localAheadStatus, nil
+		}
+		if strings.HasPrefix(line, localIsUpToDateStr) {
+			out.Msg("local repository is up to date with remote")
+			localAheadCached = true
+			localAheadStatus = false
+			return localAheadStatus, nil
+		}
+	}
+	return false, fmt.Errorf("cannot determine whether the local repo is ahead or not")
 }
