@@ -94,7 +94,7 @@ func main() {
 		"govets":     {gotoGitTop, hooksInstalled, goVets},
 		"mdtoc":      {mdToc},
 
-		"pre-push":     {gotoGitTop, hooksInstalled, stdFiles, goTests, goVets, mdToc, allCommitted, haveRemote, pkgGoDev, gitTag},
+		"pre-push":     {gotoGitTop, hooksInstalled, stdFiles, goTests, goVets, mdToc, allCommitted, haveRemote, gitTag, pkgGoDev},
 		"allcommitted": {gotoGitTop, hooksInstalled, allCommitted},
 		"haveremote":   {gotoGitTop, hooksInstalled, haveRemote},
 		"gittag":       {gotoGitTop, hooksInstalled, gitTag},
@@ -110,7 +110,7 @@ func main() {
 }
 
 func usage() {
-	fmt.Fprintf(os.Stderr, usageInfo)
+	fmt.Fprint(os.Stderr, usageInfo)
 	os.Exit(1)
 }
 
