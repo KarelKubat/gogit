@@ -74,6 +74,9 @@ func (tg *Tag) Less(ot *Tag) bool {
 }
 
 func (tg *Tag) Equal(ot *Tag) bool {
+	if ot == nil {
+		return false
+	}
 	return tg.Major == ot.Major && tg.Minor == ot.Minor && tg.Detail == ot.Detail
 }
 
