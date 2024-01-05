@@ -131,7 +131,7 @@ func gotoGitTop() error {
 		return errs.Add(lines...)
 	}
 	gitTop = lines[0]
-	out.Msg(fmt.Sprintf("top level git folder: %q\n", gitTop))
+	out.Msg("top level git folder: %q\n", gitTop)
 	if err := os.Chdir(gitTop); err != nil {
 		return errs.Add(fmt.Sprintf("cannot chdir to top level git folder: %v", err))
 	}
@@ -275,7 +275,7 @@ func gitTag() error {
 	if err != nil {
 		return err
 	}
-	out.Msg(fmt.Sprintf("local tag: %q, remote tag: %q", localTag, remoteTag))
+	out.Msg("local tag: %q, remote tag: %q", localTag, remoteTag)
 	if !remoteTag.IsZero() && !localTag.Greater(remoteTag) {
 		nextTag := remoteTag.Next()
 		return errors.New(
@@ -292,12 +292,12 @@ func gitTag() error {
 			}, "\n"))
 	}
 	if !localTag.IsZero() {
-		out.Msg(fmt.Sprintf("local tag %v will need pushing to remote, remember to run:", localTag))
+		out.Msg("local tag %v will need pushing to remote, remember to run:", localTag)
 		out.Msg(action.Suggest("git push origin %v", localTag))
 	} else {
-		out.Msg(fmt.Sprintf("local tag %v is still at zero; to increase to a working set, run:", localTag))
-		action.Suggest("# --- increase tag to a supported version")
-		action.Suggest("git tag -a v0.0.1 -m v0.0.1")
+		out.Msg("local tag %v is still at zero; to increase to a working set, run:", localTag)
+		out.Msg(action.Suggest("# --- if needed, increase tag to a supported version"))
+		out.Msg(action.Suggest("git tag -a v0.0.1 -m v0.0.1"))
 	}
 	return nil
 }
@@ -367,7 +367,7 @@ func haveRemote() error {
 	}
 	if len(lines) > 0 {
 		for _, l := range lines {
-			out.Msg(fmt.Sprintf("%q is a remote repository", l))
+			out.Msg("%q is a remote repository", l)
 		}
 		return nil
 	}

@@ -29,10 +29,9 @@ func Title(ss ...string) {
 	}
 }
 
-func Msg(ss ...string) {
-	for _, s := range ss {
-		for _, l := range strings.Split(s, "\n") {
-			out("green", l)
-		}
+func Msg(f string, args ...any) {
+	s := fmt.Sprintf(f, args...)
+	for _, l := range strings.Split(s, "\n") {
+		out("green", l)
 	}
 }
