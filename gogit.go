@@ -319,7 +319,7 @@ func gitTag() error {
 	if !localTag.IsZero() && !localTag.Equal(remoteTag) {
 		out.Msg("local tag %v will need pushing to remote, remember to run:", localTag)
 		out.Msg(action.Suggest("git push origin %v", localTag))
-	} else {
+	} else if localTag.IsZero() {
 		out.Msg("local tag %v is still at zero; to increase to a working set, run:", localTag)
 		out.Msg(action.Suggest("# --- if needed, increase tag to a supported version"))
 		out.Msg(action.Suggest("git tag -a v0.0.1 -m v0.0.1"))
