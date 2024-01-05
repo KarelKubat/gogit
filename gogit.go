@@ -47,6 +47,17 @@ Usage:
 	tocEnd   = "<!-- /toc -->"
 )
 
+var (
+	// Local/remote git tags, cached after first lookup
+	tagLocal, tagRemote *tag.Tag
+
+	// Supported remote repositories
+	supportedRemoteRepos = []string{"github.com", "gitlab.com"}
+
+	// Main package, cached after first lookup
+	mainPackageName string
+)
+
 func main() {
 	// `gogit make-test-frame $GO_SRC` is a special case.
 	if len(os.Args) >= 2 && os.Args[1] == "make-test-frame" {
@@ -73,7 +84,7 @@ func main() {
 		"govets":     {gotoGitTop, hooksInstalled, goVets},
 		"mdtoc":      {mdToc},
 
-		"pre-push":     {gotoGitTop, hooksInstalled, stdFiles, goTests, goVets, mdToc, allCommitted, haveRemote, gitTag},
+		"pre-push":     {gotoGitTop, hooksInstalled, stdFiles, goTests, goVets, mdToc, allCommitted, haveRemote, gitTag, pkgGoDev},
 		"allcommitted": {gotoGitTop, hooksInstalled, allCommitted},
 		"haveremote":   {gotoGitTop, hooksInstalled, haveRemote},
 		"gittag":       {gotoGitTop, hooksInstalled, gitTag},
@@ -302,7 +313,21 @@ func gitTag() error {
 	return nil
 }
 
+func pkgGoDev() error {
+	packageName, err := mainPackage()
+	if err != nil {
+		return err
+	}
+	out.Msg("to refresh the package on pkg.go.dev, goto:")
+	out.Msg("   https://pkg.go.dev/%s", packageName)
+	out.Msg("and click on the Request button")
+	return nil
+}
+
 func localGitTag() (*tag.Tag, error) {
+	if tagLocal != nil {
+		return tagLocal, nil
+	}
 	lines, err := run.Exec("checking local git tag",
 		[]string{"git", "tag"})
 	if err != nil {
@@ -324,10 +349,14 @@ func localGitTag() (*tag.Tag, error) {
 			}, "\n"))
 		}
 	}
-	return tgs.Highest(), nil
+	tagLocal = tgs.Highest()
+	return tagLocal, nil
 }
 
 func remoteGitTag() (*tag.Tag, error) {
+	if tagRemote != nil {
+		return tagRemote, nil
+	}
 	lines, err := run.Exec("checking remote git tag",
 		[]string{"git", "ls-remote", "--tags"})
 	if err != nil {
@@ -356,7 +385,8 @@ func remoteGitTag() (*tag.Tag, error) {
 	if !tgs.HasTags() {
 		return nil, nil
 	}
-	return tgs.Highest(), nil
+	tagRemote = tgs.Highest()
+	return tagRemote, nil
 }
 
 func haveRemote() error {
@@ -387,4 +417,35 @@ func haveRemote() error {
 	}
 	errs.Add("no remote repository is configured")
 	return errs.Add(suggestions...)
+}
+
+func mainPackage() (name string, err error) {
+	if mainPackageName != "" {
+		return mainPackageName, nil
+	}
+	b, err := os.ReadFile("go.mod")
+	if err != nil {
+		return "", fmt.Errorf("can't read `go.mod`: %v", err)
+	}
+	lines := strings.Split(string(b), "\n")
+	if len(lines) < 1 {
+		return "", fmt.Errorf("`go.mod` must contain at least 1 line")
+	}
+	parts := strings.Split(lines[0], " ")
+	if len(parts) != 2 || parts[0] != "module" {
+		return "", fmt.Errorf("`go.mod` has an incorrect first line, expected `module so-and-so`, got %q", lines[0])
+	}
+	supported := false
+	for _, url := range supportedRemoteRepos {
+		if strings.HasPrefix(parts[1], url) {
+			supported = true
+			break
+		}
+	}
+	if !supported {
+		return "", fmt.Errorf("`go.mod`: remote repo %q not supported, must start with %v",
+			parts[1], strings.Join(supportedRemoteRepos, " or "))
+	}
+	mainPackageName = parts[1]
+	return mainPackageName, nil
 }
