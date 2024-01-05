@@ -437,6 +437,7 @@ func mainPackage() (name string, err error) {
 	if mainPackageName != "" {
 		return mainPackageName, nil
 	}
+	out.Title("fetching main package name")
 	b, err := os.ReadFile("go.mod")
 	if err != nil {
 		return "", fmt.Errorf("can't read `go.mod`: %v", err)
@@ -461,6 +462,7 @@ func mainPackage() (name string, err error) {
 			parts[1], strings.Join(supportedRemoteRepos, " or "))
 	}
 	mainPackageName = parts[1]
+	out.Msg("main package name is %q", mainPackageName)
 	return mainPackageName, nil
 }
 
@@ -468,7 +470,8 @@ func localIsAhead() (ahead bool, err error) {
 	if localAheadCached {
 		return localAheadStatus, nil
 	}
-	lines, err := run.Exec("git", []string{"status", "-uno"})
+	out.Title("checking whether local repo is ahead of remote")
+	lines, err := run.Exec("checking local status", []string{"git", "status", "-uno"})
 	if err != nil {
 		return false, err
 	}
