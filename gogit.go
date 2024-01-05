@@ -316,7 +316,7 @@ func gitTag() error {
 				action.Suggest("git push --no-verify"),
 			}, "\n"))
 	}
-	if !localTag.IsZero() {
+	if !localTag.IsZero() && !localTag.Equal(remoteTag) {
 		out.Msg("local tag %v will need pushing to remote, remember to run:", localTag)
 		out.Msg(action.Suggest("git push origin %v", localTag))
 	} else {
