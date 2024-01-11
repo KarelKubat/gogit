@@ -26,14 +26,15 @@ In the pre-commit phase, it checks:
 - That `.go` files have corresponding `_test.go` tests (if not, dummy test frames can be created),
 - That the tests pass,
 - That `govet` is happy,
-- When `README.md` isn't set up for automatic table of contents management, actions are suggested to enable this.
+- The table of contents in `README.md` is refreshed. When `README.md` isn't set up for automatic table of contents management, actions are suggested to enable this.
 
 In the pre-push phase, it checks all of the above, plus:
 
 - That all local files are committed,
 - That the repository is tagged (this requires a local tag, when none present, `v0.0.0` is suggested),
-- That next pushes to a remote repository use a "next version" tag (e.g., `v3.14.15`, when the old tag is `v3.14.14`),
-- That there are remotes set up.
+- That there is a remote repository,
+- That next pushes to a remote repository use a "one-higher version" tag (e.g., `v3.14.15`, when the old tag is `v3.14.14`),
+- If the version is non-zero (greater than `v0.0.0`) and if the package is not on pkg.go.dev, then a suggestion is made to register the package.
 
 The purpose of `gogit` is to ensure some repository sanity, and to suggest steps to achieve that. `gogit` itself doesn't create or modify files, but it shows suggestions, and where possible, the right commands.
 
@@ -52,16 +53,11 @@ The listings below are a few examples of what `gogit` suggests. The output on a 
 ```plain
 # Let's ask `gogit` which hooks we need.
 gogit hooks
+
 [gogit] finding top level git folder
-[gogit] running git rev-parse --show-toplevel
-[gogit] top level git folder: "/Users/karelk/go/src/github.com/KarelKubat/gtpl"
 [gogit] checking that .git/hooks are installed
-[gogit] hook ".git/hooks/pre-commit" doesn't exist, run:
-[gogit] echo exec gogit pre-commit > .git/hooks/pre-commit
-[gogit] chmod +x .git/hooks/pre-commit
-[gogit] hook ".git/hooks/pre-push" doesn't exist, run:
-[gogit] echo exec gogit pre-push > .git/hooks/pre-push
-[gogit] chmod +x .git/hooks/pre-push
+[gogit] hook ".git/hooks/pre-commit" doesn't exist
+[gogit] hook ".git/hooks/pre-push" doesn't exist
 [gogit] suggestion(s):
   echo exec gogit pre-commit > .git/hooks/pre-commit
   chmod +x .git/hooks/pre-commit
@@ -73,17 +69,11 @@ gogit hooks
 
 ```plain
 # The hooks are in place, `git commit` can now be used.
-git commit
-[gogit] finding top level git folder
-[gogit] running git rev-parse --show-toplevel
-[gogit] top level git folder: "/Users/karelk/go/src/github.com/KarelKubat/gtpl"
-[gogit] checking that .git/hooks are installed
+git commit -a -m $MESSAGE
+
 [gogit] checking that standard files are present
-[gogit] `.gitignore` not found, create one and retry, at a minimum run:
-[gogit] echo .git > .gitignore
-[gogit] `go.mod` not found, at a minimum run:
-[gogit] go mod init
-[gogit] go mod tidy
+[gogit] `.gitignore` not found, create one and retry
+[gogit] `go.mod` not found
 [gogit] suggestion(s):
   echo .git > .gitignore
   go mod init
@@ -93,10 +83,9 @@ git commit
 #### After adding the files and committing locally
 
 ```plain
-git commit -a -m 'conversion to gogit'
+git commit -a -m $MESSAGE
+
 [gogit] finding top level git folder
-[gogit] running git rev-parse --show-toplevel
-[gogit] top level git folder: "/Users/karelk/go/src/github.com/KarelKubat/gtpl"
 [gogit] checking that .git/hooks are installed
 [gogit] checking that standard files are present
 [gogit] checking for go tests
@@ -110,13 +99,13 @@ nothing to commit, working tree clean
 #### Suggestion to automatically refresh the Table of Contents
 
 ```plain
-...
+git commit -a -m $MESSAGE
+
 [gogit] (Not fatal) README.md has no Table of Contents section
 [gogit] to have the TOC automatically updated, run:
 [gogit] go install github.com/kubernetes-sigs/mdtoc@latest
 [gogit] add   <!-- toc -->    to README.md
 [gogit] add   <!-- /toc -->   to README.md
-...
 ```
 
 ### `git push` phase
@@ -125,12 +114,11 @@ nothing to commit, working tree clean
 
 ```plain
 git push
-...
+
 [gogit] checking for git tag validity
 [gogit] checking local git tag
 [gogit] running git tag
-[gogit] local tag not found, for a first tagging, run:
-[gogit] git tag -a v0.0.0 -m v0.0.0
+[gogit] local tag not found
 [gogit] suggestion(s):
   git tag -a v0.0.0 -m v0.0.0
 ```
@@ -138,12 +126,12 @@ git push
 #### Local tag should be pushed to remote
 
 ```plain
-...
-[gogit] running git tag
-[gogit] checking remote git tag
-[gogit] running git ls-remote --tags
-[gogit] remote tag not found, for a first tagging, run:
-[gogit] git push origin v0.0.0
+git push
+
+[gogit] local tag: "v2.0.10", remote tag: "v2.0.9"
+[gogit] checking whether local repo is ahead of remote
+[gogit] checking local status
+[gogit] local tag v2.0.10 will need pushing to remote
 [gogit] suggestion(s):
-  git push origin v0.0.0
-  ```
+  git push origin v2.0.10
+```
