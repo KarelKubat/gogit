@@ -12,6 +12,7 @@ import (
 	"github.com/KarelKubat/gogit/action"
 	"github.com/KarelKubat/gogit/errs"
 	"github.com/KarelKubat/gogit/out"
+	"github.com/KarelKubat/gogit/pkggodev"
 	"github.com/KarelKubat/gogit/run"
 	"github.com/KarelKubat/gogit/tag"
 	"github.com/KarelKubat/gogit/tags"
@@ -328,13 +329,32 @@ func gitTag() error {
 }
 
 func pkgGoDev() error {
+	// Don't suggest entering on pkg.go.dev if the we're on v0.0.0
+	ltag, err := localGitTag()
+	if err != nil {
+		return err
+	}
+	if ltag.IsZero() {
+		return nil
+	}
+
+	// Are we on pkg.go.dev yet?
 	packageName, err := mainPackage()
 	if err != nil {
 		return err
 	}
-	out.Msg("to refresh the package on pkg.go.dev, goto:")
-	out.Msg("   https://pkg.go.dev/%s", packageName)
-	out.Msg("and click on the Request button")
+	pkg := pkggodev.New(packageName)
+	present, err := pkg.HasPackage()
+	if err != nil {
+		return err
+	}
+	if present {
+		return nil
+	}
+
+	// Suggest adding
+	out.Msg("to add the package on pkg.go.dev:")
+	out.Msg(action.Suggest("goto %v and click the Request button", pkg.URL()))
 	return nil
 }
 
