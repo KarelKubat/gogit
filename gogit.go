@@ -293,7 +293,8 @@ func mdUntab() error {
 	if err != nil {
 		return err
 	}
-	lines, err := run.Exec("untabifying README.MD using tab2space", []string{"tab2space", "README.md"})
+	lines, err := run.Exec("untabifying README.MD using tab2space",
+		[]string{"tab2space", "-lf", "README.md"})
 	if err != nil {
 		out.Error("(Not fatal) tab2space failed")
 		return nil
