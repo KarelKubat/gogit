@@ -134,4 +134,4 @@ git push
 [gogit] local tag v2.0.10 will need pushing to remote
 [gogit] suggestion(s):
   git push origin v2.0.10
-```
+```
