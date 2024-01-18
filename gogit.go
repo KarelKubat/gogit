@@ -95,7 +95,7 @@ func main() {
 		"govets":     {gotoGitTop, hooksInstalled, goVets},
 		"mdtoc":      {mdToc},
 
-		"pre-push":     {gotoGitTop, hooksInstalled, stdFiles, goTests, goVets, mdToc, allCommitted, haveRemote, gitTag, pkgGoDev},
+		"pre-push":     {gotoGitTop, hooksInstalled, allCommitted, haveRemote, stdFiles, goTests, goVets, mdToc, gitTag, pkgGoDev},
 		"allcommitted": {gotoGitTop, hooksInstalled, allCommitted},
 		"haveremote":   {gotoGitTop, hooksInstalled, haveRemote},
 		"gittag":       {gotoGitTop, hooksInstalled, gitTag},
