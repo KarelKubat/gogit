@@ -89,13 +89,13 @@ func main() {
 	checks := map[string][]func() error{
 		"hooks": {gotoGitTop, hooksInstalled},
 
-		"pre-commit": {gotoGitTop, hooksInstalled, stdFiles, goTests, goVets, mdToc, mdUntab},
+		"pre-commit": {gotoGitTop, hooksInstalled, stdFiles, goTests, goVets, mdToc},
 		"stdfiles":   {gotoGitTop, hooksInstalled, stdFiles},
 		"gotests":    {gotoGitTop, hooksInstalled, goTests},
 		"govets":     {gotoGitTop, hooksInstalled, goVets},
 		"mdtoc":      {mdToc},
 
-		"pre-push":     {gotoGitTop, hooksInstalled, allCommitted, haveRemote, stdFiles, goTests, goVets, mdToc, mdUntab, gitTag, pkgGoDev},
+		"pre-push":     {gotoGitTop, hooksInstalled, allCommitted, haveRemote, stdFiles, goTests, goVets, mdToc, gitTag, pkgGoDev},
 		"allcommitted": {gotoGitTop, hooksInstalled, allCommitted},
 		"haveremote":   {gotoGitTop, hooksInstalled, haveRemote},
 		"gittag":       {gotoGitTop, hooksInstalled, gitTag},
@@ -288,6 +288,7 @@ func mdToc() error {
 	return nil // to satisfy the signature
 }
 
+/* Ouch.. this badly messes up READMEs. Not using.
 func mdUntab() error {
 	_, err := os.Stat("README.md")
 	if err != nil {
@@ -304,6 +305,7 @@ func mdUntab() error {
 	}
 	return nil
 }
+*/
 
 func gitTag() error {
 	out.Title("checking git tags")
