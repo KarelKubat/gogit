@@ -1,5 +1,7 @@
 # gogit
 
+`gogit` is an all-in-one tool to make your Go projects more suitable for Github. It's my way of structuring my projects and I hope it'll be useful for you too.
+
 <!-- toc -->
 - [What it does](#what-it-does)
 - [Installation](#installation)
@@ -13,8 +15,6 @@
     - [We need a local tag](#we-need-a-local-tag)
     - [Local tag should be pushed to remote](#local-tag-should-be-pushed-to-remote)
 <!-- /toc -->
-
-`gogit` is an all-in-one tool to make your Go projects more suitable for Github. It's my way of structuring my projects and I hope it'll be useful for you too.
 
 ## What it does
 
@@ -51,8 +51,7 @@ The listings below are a few examples of what `gogit` suggests. The output on a 
 #### Fresh installation of git hooks
 
 ```plain
-# Let's ask `gogit` which hooks we need.
-gogit hooks
+gogit hooks  # Let's ask `gogit` which hooks we need.
 
 [gogit] finding top level git folder
 [gogit] checking that .git/hooks are installed
@@ -68,8 +67,7 @@ gogit hooks
 #### Some files are expected
 
 ```plain
-# The hooks are in place, `git commit` can now be used.
-git commit -a -m $MESSAGE
+git commit -a -m $MESSAGE  # The hooks are in place, `git commit` can now be used.
 
 [gogit] checking that standard files are present
 [gogit] `.gitignore` not found, create one and retry
@@ -134,4 +132,4 @@ git push
 [gogit] local tag v2.0.10 will need pushing to remote
 [gogit] suggestion(s):
   git push origin v2.0.10
-```
+```
