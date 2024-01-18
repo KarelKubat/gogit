@@ -89,13 +89,13 @@ func main() {
 	checks := map[string][]func() error{
 		"hooks": {gotoGitTop, hooksInstalled},
 
-		"pre-commit": {gotoGitTop, hooksInstalled, stdFiles, goTests, goVets, mdToc},
+		"pre-commit": {gotoGitTop, hooksInstalled, stdFiles, goTests, goVets, mdToc, mdUntab},
 		"stdfiles":   {gotoGitTop, hooksInstalled, stdFiles},
 		"gotests":    {gotoGitTop, hooksInstalled, goTests},
 		"govets":     {gotoGitTop, hooksInstalled, goVets},
 		"mdtoc":      {mdToc},
 
-		"pre-push":     {gotoGitTop, hooksInstalled, allCommitted, haveRemote, stdFiles, goTests, goVets, mdToc, gitTag, pkgGoDev},
+		"pre-push":     {gotoGitTop, hooksInstalled, allCommitted, haveRemote, stdFiles, goTests, goVets, mdToc, mdUntab, gitTag, pkgGoDev},
 		"allcommitted": {gotoGitTop, hooksInstalled, allCommitted},
 		"haveremote":   {gotoGitTop, hooksInstalled, haveRemote},
 		"gittag":       {gotoGitTop, hooksInstalled, gitTag},
@@ -255,6 +255,7 @@ func goVets() error {
 }
 
 func mdToc() error {
+	out.Title("refreshing table of contents in README.md")
 	b, err := os.ReadFile("README.md")
 	if err != nil {
 		return err
@@ -285,6 +286,23 @@ func mdToc() error {
 		return fmt.Errorf("README.md must contain exactly one tag `%v` and one tag `%v`, found: %v", tocStart, tocEnd, nTags)
 	}
 	return nil // to satisfy the signature
+}
+
+func mdUntab() error {
+	out.Title("untabifying README.md")
+	_, err := os.Stat("README.md")
+	if err != nil {
+		return err
+	}
+	lines, err := run.Exec("running tab2space on README.MD", []string{"tab2space", "README.md"})
+	if err != nil {
+		out.Error("(Not fatal) tab2space failed")
+		return nil
+	}
+	if err = os.WriteFile("README.md", []byte(strings.Join(lines, "\n")), 0644); err != nil {
+		return err
+	}
+	return nil
 }
 
 func gitTag() error {
