@@ -133,3 +133,56 @@ git push
 [gogit] suggestion(s):
   git push origin v2.0.10
 ```
+
+```go
+func untabToc() error {
+    out.Title("untabbing README.md")
+    b, err := os.ReadFile("README.md")
+    if err != nil {
+        return err
+    }
+    untabbed := []string{}
+    active := false
+    changed := false
+    for _, line := range strings.Split(string(b), "\n") {
+        if len(line) == 0 {
+            untabbed = append(untabbed, line)
+            continue
+        }
+        if strings.HasPrefix(line, "```") {
+            if line != "```" {
+                active = !active
+                untabbed = append(untabbed, line)
+                continue
+            }
+        }
+        if !active {
+            untabbed = append(untabbed, line)
+            continue
+        }
+        // Fix tabs following the first one.
+        if strings.HasPrefix(line, "\t\t") {
+            line = "\t    " + line[2:]
+            changed = true
+        }
+        // Fix the first \t.
+        for len(line) > 0 && line[0] == '\t' {
+            line = "    " + line[1:]
+            changed = true
+        }
+        untabbed = append(untabbed, line)
+    }
+    if !changed {
+        return nil
+    }
+
+    if err := os.Rename("README.md", "README.md.org"); err != nil {
+        return err
+    }
+    if err := os.WriteFile("README.md", []byte(strings.Join(untabbed, "\n")), 0644); err != nil {
+        return fmt.Errorf("failed to ovwerwrite README.md: %v, original is in README.md.org", err)
+    }
+
+    return nil
+}
+```

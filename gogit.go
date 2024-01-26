@@ -52,6 +52,9 @@ Usage:
 	// Tags in README.md to refresh the ToC
 	tocStart = "<!-- toc -->"
 	tocEnd   = "<!-- /toc -->"
+
+	// Default readme to be manipulated.
+	readme = "README.md"
 )
 
 var (
@@ -89,13 +92,13 @@ func main() {
 	checks := map[string][]func() error{
 		"hooks": {gotoGitTop, hooksInstalled},
 
-		"pre-commit": {gotoGitTop, hooksInstalled, stdFiles, goTests, goVets, mdToc},
+		"pre-commit": {gotoGitTop, hooksInstalled, stdFiles, goTests, goVets, mdUntab, mdToc},
 		"stdfiles":   {gotoGitTop, hooksInstalled, stdFiles},
 		"gotests":    {gotoGitTop, hooksInstalled, goTests},
 		"govets":     {gotoGitTop, hooksInstalled, goVets},
 		"mdtoc":      {mdToc},
 
-		"pre-push":     {gotoGitTop, hooksInstalled, allCommitted, haveRemote, stdFiles, goTests, goVets, mdToc, gitTag, pkgGoDev},
+		"pre-push":     {gotoGitTop, hooksInstalled, allCommitted, haveRemote, stdFiles, goTests, goVets, mdUntab, mdToc, gitTag, pkgGoDev},
 		"allcommitted": {gotoGitTop, hooksInstalled, allCommitted},
 		"haveremote":   {gotoGitTop, hooksInstalled, haveRemote},
 		"gittag":       {gotoGitTop, hooksInstalled, gitTag},
@@ -162,7 +165,7 @@ func gotoGitTop() error {
 
 func stdFiles() error {
 	out.Title("checking that standard files are present")
-	for _, md := range []string{"README.md", "LICENSE.md"} {
+	for _, md := range []string{readme, "LICENSE.md"} {
 		if _, err := os.Stat(md); err != nil {
 			errs.Add(fmt.Sprintf("file %v not found, create one and retry", md))
 		}
@@ -254,40 +257,6 @@ func goVets() error {
 	return err
 }
 
-func mdToc() error {
-	out.Title("refreshing table of contents in README.md")
-	b, err := os.ReadFile("README.md")
-	if err != nil {
-		return err
-	}
-	nTags := 0
-	for _, l := range strings.Split(string(b), "\n") {
-		if strings.HasPrefix(l, tocStart) || strings.HasPrefix(l, tocEnd) {
-			nTags++
-		}
-	}
-	switch nTags {
-	case 0:
-		out.Error(strings.Join([]string{
-			"(Not fatal) README.md has no Table of Contents section",
-			"to have the TOC automatically updated, run:",
-			action.Suggest("go install github.com/kubernetes-sigs/mdtoc@latest"),
-			action.Suggest("add   %v    to README.md (at first column)", tocStart),
-			action.Suggest("add   %v   to README.md (at first column)", tocEnd),
-		}, "\n"))
-		return nil
-	case 2:
-		_, err := run.Exec("refreshing README.md TOC",
-			[]string{"mdtoc", "--inplace", "README.md"})
-		if err != nil {
-			return err
-		}
-	default:
-		return fmt.Errorf("README.md must contain exactly one tag `%v` and one tag `%v`, found: %v", tocStart, tocEnd, nTags)
-	}
-	return nil // to satisfy the signature
-}
-
 /* Ouch.. this badly messes up READMEs. Not using.
 func mdUntab() error {
 	_, err := os.Stat("README.md")
@@ -306,6 +275,104 @@ func mdUntab() error {
 	return nil
 }
 */
+
+func mdUntab() error {
+	out.Title("untabbing " + readme)
+	b, err := os.ReadFile(readme)
+	if err != nil {
+		return err
+	}
+	untabbed := []string{}
+	active := false
+	changed := false
+	for _, line := range strings.Split(string(b), "\n") {
+		if len(line) == 0 {
+			untabbed = append(untabbed, line)
+			continue
+		}
+		if strings.HasPrefix(line, "```") {
+			active = !active
+			untabbed = append(untabbed, line)
+			continue
+		}
+		if !active {
+			untabbed = append(untabbed, line)
+			continue
+		}
+
+		// We're in a code block. Find the # of leading tabs.
+		nTabs := 0
+		for _, r := range line {
+			if r != '\t' {
+				break
+			}
+			nTabs++
+		}
+		var leader string
+		for i := 0; i < nTabs; i++ {
+			leader += "    "
+			line = line[1:]
+			changed = true
+		}
+		untabbed = append(untabbed, leader+line)
+	}
+	if active {
+		return errors.New(readme + ": code block ``` opened, but not closed")
+	}
+	if !changed {
+		return nil
+	}
+
+	if err := os.Rename(readme, readme+".org"); err != nil {
+		return err
+	}
+	// Ensure \n at the end.
+	if len(untabbed) > 0 && untabbed[len(untabbed)-1] != "" {
+		untabbed = append(untabbed, "")
+	}
+	if err := os.WriteFile(readme, []byte(strings.Join(untabbed, "\n")), 0644); err != nil {
+		return fmt.Errorf("failed to ovwerwrite %v: %v, original is in %v.org", readme, readme, err)
+	}
+	if err := os.Remove(readme + ".org"); err != nil {
+		return fmt.Errorf("untabbed %v was created, but backup %v.org cannot be deleted: %v", readme, readme, err)
+	}
+
+	return nil
+}
+
+func mdToc() error {
+	out.Title("refreshing table of contents in " + readme)
+	b, err := os.ReadFile(readme)
+	if err != nil {
+		return err
+	}
+	nTags := 0
+	for _, l := range strings.Split(string(b), "\n") {
+		if strings.HasPrefix(l, tocStart) || strings.HasPrefix(l, tocEnd) {
+			nTags++
+		}
+	}
+	switch nTags {
+	case 0:
+		out.Error(strings.Join([]string{
+			"(Not fatal) " + readme + " has no Table of Contents section",
+			"to have the TOC automatically updated, run:",
+			action.Suggest("go install github.com/kubernetes-sigs/mdtoc@latest"),
+			action.Suggest("add   %v    to "+readme+" (at first column)", tocStart),
+			action.Suggest("add   %v   to "+readme+" (at first column)", tocEnd),
+		}, "\n"))
+		return nil
+	case 2:
+		_, err := run.Exec("refreshing "+readme+" TOC",
+			[]string{"mdtoc", "--inplace", readme})
+		if err != nil {
+			return err
+		}
+	default:
+		return fmt.Errorf("%v must contain exactly one tag `%v` and one tag `%v`, found: %v", readme, tocStart, tocEnd, nTags)
+	}
+	return nil // to satisfy the signature
+}
 
 func gitTag() error {
 	out.Title("checking git tags")
